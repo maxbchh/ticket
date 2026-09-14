@@ -680,33 +680,8 @@
 
     <!-- Логика Исполнения (JavaScript) -->
     <script>
-        // Предустановленные базовые маршруты
-        const defaultRoutes = [
-            {
-                id: 'route_uzd_1',
-                name: 'УЗД: Сосновый Бор — Крутоборка',
-                transport: 'uzd',
-                farePerStop: 0.50,
-                minPrice: 1.00,
-                stops: ['Сосновый Бор', 'Лельма', 'Крутоборка']
-            },
-            {
-                id: 'route_train_1',
-                name: 'Главная Линия ЖД',
-                transport: 'train',
-                farePerStop: 0.80,
-                minPrice: 1.50,
-                stops: ['Вокзал-Главный', 'Семёново', 'Пригородная', 'Депо-Западное']
-            },
-            {
-                id: 'route_bus_1',
-                name: 'Маршрут №1 (Городской)',
-                transport: 'bus',
-                farePerStop: 0.45,
-                minPrice: 0.90,
-                stops: ['Автовокзал', 'Площадь Победы', 'Заводская', 'Парковая']
-            }
-        ];
+        // Предустановленные базовые маршруты (пустой массив по умолчанию)
+        const defaultRoutes = [];
 
         // Полная инициализация базы данных с автозагрузкой из localStorage
         let state = {
