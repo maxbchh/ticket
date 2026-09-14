@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Терминал Кондуктора Pro — Компактная Печать</title>
+    <style>
+        :root {
+            --bg-main: #f4f7fb;
+            --bg-card: rgba(255,255,255,.62);
+            --bg-input: rgba(255,255,255,.72);
+            --border-color: rgba(255,255,255,.82);
+            --accent-cyan: #007aff;
+            --accent-cyan-hover: #0066d6;
+            --accent-green: #20a464;
+            --accent-green-hover: #16834e;
+            --accent-orange: #f59e0b;
+            --accent-red: #e53935;
+            --text-primary: #172033;
+            --text-secondary: #657087;
+            --ticket-bg: #ffffff;
+            --ticket-text: #000000;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, -apple-system, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background:
+              radial-gradient(circle at 10% 0%, rgba(0,122,255,.12), transparent 32%),
+              radial-gradient(circle at 90% 10%, rgba(120,90,255,.10), transparent 30%),
+              linear-gradient(135deg,#f8fbff,#edf2f8);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Верхняя панель статуса */
+        .top-status-bar {
+            width: 100%;
+            max-width: 1200px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            backdrop-filter: blur(22px) saturate(150%);
+            -webkit-backdrop-filter: blur(22px) saturate(150%);
+            padding: 12px 18px;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .status-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+        }
+
+        .status-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+        .badge-active { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); border: 1px solid var(--accent-green); }
+        .badge-closed { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); border: 1px solid var(--accent-red); }
+
+        /* Вкладки навигации */
+        .tabs-nav {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .tab-btn {
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tab-btn.active {
+            background: var(--accent-cyan);
+            color: #ffffff;
+            border-color: var(--accent-cyan);
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: rgba(0, 122, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        /* Главный контейнер */
+        .main-layout {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 18px;
+        }
+
+        @media (max-width: 880px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            backdrop-filter: blur(22px) saturate(150%);
+            -webkit-backdrop-filter: blur(22px) saturate(150%);
+            padding: 18px;
+            margin-bottom: 16px;
+            box-shadow: 0 10px 35px rgba(30,50,80,.10), inset 0 1px 0 rgba(255,255,255,.8);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            color: var(--accent-cyan);
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="text"], input[type="number"], select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-input);
+            border: 1px solid rgba(180,190,205,.35);
+            border-radius: 12px;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--accent-cyan);
+        }
+
+        .btn {
+            padding: 11px 16px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-cyan { background: var(--accent-cyan); color: #ffffff; }
+        .btn-cyan:hover { background: var(--accent-cyan-hover); }
+
+        .btn-green { background: var(--accent-green); color: #ffffff; }
+        .btn-green:hover { background: var(--accent-green-hover); }
+
+        .btn-orange { background: var(--accent-orange); color: #ffffff; }
+
+        .btn-red { background: var(--accent-red); color: #ffffff; }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        .btn-outline:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        /* Предпросмотр Чека (Компактный экономичный термочек) */
+        .preview-sticky {
+            position: sticky;
+            top: 12px;
+        }
+
+        .ticket-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .ticket-paper {
+            background: var(--ticket-bg);
+            color: var(--ticket-text);
+            width: 58mm;
+            min-height: auto;
+            padding: 8px 6px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            line-height: 1.2;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+            border-radius: 2px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-bottom: 14px;
+            position: relative;
+            transition: width 0.2s ease;
+        }
+
+        .ticket-paper::after {
+            content: "";
+            position: absolute;
+            bottom: -6px;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: radial-gradient(circle, transparent, transparent 50%, var(--bg-card) 50%, var(--bg-card) 100%);
+            background-size: 8px 12px;
+        }
+
+        /* Быстрые кнопки городского транспорта */
+        .quick-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+        }
+
+        .quick-card {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .quick-card:hover {
+            border-color: var(--accent-cyan);
+            transform: translateY(-2px);
+        }
+        .quick-card-title { font-weight: 700; font-size: 0.95rem; color: var(--accent-cyan); }
+        .quick-card-price { font-size: 1.2rem; font-weight: 800; margin-top: 4px; color: var(--accent-green); }
+
+        /* Таблицы */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--bg-input);
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Стили исключительно для физической печати */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .ticket-paper, .ticket-paper * {
+                visibility: visible;
+            }
+            .ticket-paper {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 58mm !important;
+                padding: 1mm !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+            }
+            .ticket-paper::after {
+                display: none;
+            }
+            @page {
+                size: 58mm auto;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Верхняя статус-панель -->
+    <div class="top-status-bar">
+        <div class="status-title">
+            <span>📠 ТЕРМИНАЛ КОНДУКТОРА</span>
+            <span id="shiftBadge" class="badge badge-closed">СМЕНА ЗАКРЫТА</span>
+        </div>
+        <div class="status-info">
+            <div>Транспорт: <strong id="currentTransportLabel" style="color: var(--text-primary)">Узкоколейная ЖД</strong></div>
+            <div>Продано билетов: <strong id="totalShiftTickets" style="color: var(--accent-cyan)">0</strong></div>
+            <div>Выручка: <strong id="totalShiftRevenue" style="color: var(--accent-green)">0.00 руб.</strong></div>
+            <div><span id="liveClock">00:00:00</span></div>
+        </div>
+    </div>
+
+    <!-- Вкладки Навигации -->
+    <div class="tabs-nav">
+        <button class="tab-btn active" onclick="switchTab('terminal', this)">🎟️ Выпуск Билета</button>
+        <button class="tab-btn" onclick="switchTab('quick', this)">⚡ Быстрые Тарифы</button>
+        <button class="tab-btn" onclick="switchTab('routes', this)">🗺️ Конструктор Маршрутов</button>
+        <button class="tab-btn" onclick="switchTab('shift', this)">📜 Журнал & Z-Отчёт</button>
+        <button class="tab-btn" onclick="switchTab('settings', this)">⚙️ Настройки Терминала</button>
+    </div>
+
+    <!-- Главный двухколоночный контент -->
+    <div class="main-layout">
+        
+        <!-- Левая зона (Динамические Вкладки) -->
+        <div class="left-column">
+
+            <!-- Вкладка 1: Терминал Продажи -->
+            <div id="tab-terminal" class="tab-content active">
+                <div class="card">
+                    <div class="card-title">
+                        <span>Параметры Поездки</span>
+                        <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem" onclick="soundBeep(880, 80)">🔊 Тон</button>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Вид Транспорта</label>
+                            <select id="transportType" onchange="onTransportTypeChange()">
+                                <option value="uzd">Узкоколейная ЖД</option>
+                                <option value="train">Железная Дорога</option>
+                                <option value="bus">Автобус</option>
+                                <option value="trolley">Троллейбус</option>
+                                <option value="tram">Трамвай</option>
+                                <option value="minibus">Маршрутное Такси</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Выберите Маршрут</label>
+                            <select id="routeSelect" onchange="onRouteSelect()">
+                                <!-- Заполняется скриптом -->
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Станция Отправления (От)</label>
+                            <select id="stationFrom" onchange="recalculatePrice()"></select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Станция Назначения (До)</label>
+                            <select id="stationTo" onchange="recalculatePrice()"></select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Категория Пассажира</label>
+                            <select id="passengerType" onchange="recalculatePrice()">
+                                <option value="full">Полный (100%)</option>
+                                <option value="child">Детский / Школьный (50%)</option>
+                                <option value="lgt">Льготный (0%)</option>
+                                <option value="luggage">Багаж / Животные</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Стоимость (руб.) [Авторасчёт]</label>
+                            <input type="number" step="0.01" id="ticketPrice" value="0.00" oninput="updatePreview()">
+                        </div>
+
+                        <div class="form-group">
+                            <label>№ Поезда / Рейса</label>
+                            <input type="text" id="trainNumInput" value="№601 УЗД" oninput="updatePreview()">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Вагон / Место (необязательно)</label>
+                            <input type="text" id="seatInput" placeholder="Вагон 02, Место 14" oninput="updatePreview()">
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Дополнительное Примечание в Билете</label>
+                        <input type="text" id="ticketNoteInput" placeholder="Например: Внеграфиковый поезд" oninput="updatePreview()">
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button class="btn btn-green btn-block" onclick="processTicketSale()">✅ Продать & Внести в Смену</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Вкладка 2: Быстрые Тарифы (Городской транспорт) -->
+            <div id="tab-quick" class="tab-content">
+                <div class="card">
+                    <div class="card-title">Быстрый Выпуск (Городские и фиксированные тарифы)</div>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 14px;">
+                        Нажатие на карточку мгновенно подставляет тариф и формирует компактный билет.
+                    </p>
+                    <div class="quick-grid">
+                        <div class="quick-card" onclick="quickIssue('Разовый Поездку', 0.90)">
+                            <div class="quick-card-title">🎫 Разовый Билет</div>
+                            <div class="quick-card-price">0.90 руб.</div>
+                        </div>
+                        <div class="quick-card" onclick="quickIssue('Льготный Поездку', 0.45)">
+                            <div class="quick-card-title">👶 Льготный / Детский</div>
+                            <div class="quick-card-price">0.45 руб.</div>
+                        </div>
+                        <div class="quick-card" onclick="quickIssue('Провоз Багажа', 0.90)">
+                            <div class="quick-card-title">🧳 Провоз Багажа</div>
+                            <div class="quick-card-price">0.90 руб.</div>
+                        </div>
+                        <div class="quick-card" onclick="quickIssue('Экспресс / Экскурсия', 2.50)">
+                            <div class="quick-card-title">⭐ Экспресс Тариф</div>
+                            <div class="quick-card-price">2.50 руб.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Вкладка 3: Конструктор Маршрутов -->
+            <div id="tab-routes" class="tab-content">
+                <div class="card">
+                    <div class="card-title">Добавить Новый Маршрут</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Название Маршрута</label>
+                            <input type="text" id="newRouteName" placeholder="Например: Линия №1">
+                        </div>
+                        <div class="form-group">
+                            <label>Тип Транспорта</label>
+                            <select id="newRouteTransport">
+                                <option value="uzd">Узкоколейная ЖД</option>
+                                <option value="train">Железная Дорога</option>
+                                <option value="bus">Автобус</option>
+                                <option value="trolley">Троллейбус</option>
+                                <option value="tram">Трамвай</option>
+                                <option value="minibus">Маршрутное Такси</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Тариф за 1 Остановку (руб.)</label>
+                            <input type="number" step="0.01" id="newRouteFarePerStop" value="0.50">
+                        </div>
+                        <div class="form-group">
+                            <label>Минимальная цена (руб.)</label>
+                            <input type="number" step="0.01" id="newRouteMinPrice" value="1.00">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Список Остановок / Станций (по порядку, через запятую)</label>
+                        <textarea id="newRouteStops" rows="3" placeholder="Сосновый Бор, Лельма, Крутоборка"></textarea>
+                    </div>
+                    <button class="btn btn-cyan" onclick="addNewRoute()">💾 Сохранить Маршрут в Память</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Сохранённые Маршруты</div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Название</th>
+                                    <th>Вид</th>
+                                    <th>Остановки</th>
+                                    <th>Тариф/Ост.</th>
+                                    <th>Действие</th>
+                                </tr>
+                            </thead>
+                            <tbody id="routesTableBody">
+                                <!-- Заполняется скриптом -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Вкладка 4: Смена и Z-Отчёт -->
+            <div id="tab-shift" class="tab-content">
+                <div class="card">
+                    <div class="card-title">Открытие смены — начальная касса</div>
+                    <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:12px">
+                        Введите, сколько каждого номинала есть в кассе в начале смены.
+                    </p>
+                    <div class="form-grid">
+                        <div class="form-group"><label>500</label><input type="number" min="0" value="0" id="cash500"></div>
+                        <div class="form-group"><label>200</label><input type="number" min="0" value="0" id="cash200"></div>
+                        <div class="form-group"><label>100</label><input type="number" min="0" value="0" id="cash100"></div>
+                        <div class="form-group"><label>50</label><input type="number" min="0" value="0" id="cash50"></div>
+                        <div class="form-group"><label>20</label><input type="number" min="0" value="0" id="cash20"></div>
+                        <div class="form-group"><label>10</label><input type="number" min="0" value="0" id="cash10"></div>
+                        <div class="form-group"><label>5</label><input type="number" min="0" value="0" id="cash5"></div>
+                        <div class="form-group"><label>2</label><input type="number" min="0" value="0" id="cash2"></div>
+                        <div class="form-group"><label>1</label><input type="number" min="0" value="0" id="cash1"></div>
+                        <div class="form-group"><label>0,50</label><input type="number" min="0" value="0" id="cash050"></div>
+                        <div class="form-group"><label>0,20</label><input type="number" min="0" value="0" id="cash020"></div>
+                        <div class="form-group"><label>0,10</label><input type="number" min="0" value="0" id="cash010"></div>
+                        <div class="form-group"><label>0,05</label><input type="number" min="0" value="0" id="cash005"></div>
+                    </div>
+                    <strong>Начальная касса: <span id="cashStartTotal">0.00</span> руб.</strong>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Управление Кассовой Сменой</div>
+                    <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                        <button class="btn btn-green" onclick="openShift()">🟢 Открыть Смену</button>
+                        <button class="btn btn-red" onclick="closeShift()">🔴 Закрыть Смену (Z-Отчёт)</button>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Кассир / Кондуктор</label>
+                            <input type="text" id="conductorName" value="" placeholder="ФИО Кондуктора" oninput="saveSettings()">
+                        </div>
+                        <div class="form-group">
+                            <label>Номер Терминала (POS)</label>
+                            <input type="text" id="terminalID" value="" placeholder="POS-01" oninput="saveSettings()">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">История Билетов За Смену</div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>№ Билета</th>
+                                    <th>Время</th>
+                                    <th>Маршрут / Рейс</th>
+                                    <th>От — До</th>
+                                    <th>Сумма</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ticketHistoryBody">
+                                <!-- Заполняется динамически -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Вкладка 5: Настройки -->
+            <div id="tab-settings" class="tab-content">
+                <div class="card">
+                    <div class="card-title">Настройки Билета и Печати</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Название Организации / Перевозчика</label>
+                            <input type="text" id="orgName" value="" placeholder="Детская Узкоколейная ЖД" oninput="saveSettings(); updatePreview();">
+                        </div>
+                        <div class="form-group">
+                            <label>Ширина Бумаги Термопринтера</label>
+                            <select id="paperWidthSelect" onchange="changePaperWidth()">
+                                <option value="58mm">58 мм (Стандартный мини-чек)</option>
+                                <option value="80mm">80 мм (Широкий чек)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Текст внизу билета (Футер)</label>
+                        <input type="text" id="ticketFooter" value="" placeholder="Счастливого пути!" oninput="saveSettings(); updatePreview();">
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;">
+                        <button class="btn btn-outline" onclick="exportDataJSON()">📥 Экспорт Настроек в JSON</button>
+                        <label class="btn btn-outline" style="cursor:pointer; margin:0;">
+                            📤 Импорт Настроек из JSON
+                            <input type="file" id="importJsonInput" accept=".json" style="display:none;" onchange="importDataJSON(event)">
+                        </label>
+                        <button class="btn btn-red" onclick="resetToDefaults()">🔄 Сбросить Все Данные</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Правая зона: Предпросмотр 58мм Чека -->
+        <div class="right-column">
+            <div class="preview-sticky">
+                <div class="card ticket-wrapper">
+                    <div class="card-title" style="width: 100%;">
+                        <span>📄 Чек (Компактный)</span>
+                    </div>
+
+                    <!-- Чековая лента -->
+                    <div class="ticket-paper" id="ticketPreview"></div>
+
+                    <!-- Действия с билетом -->
+                    <div style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
+                        <button class="btn btn-cyan btn-block" onclick="copyTicketText()">📋 Скопировать Текст</button>
+                        <button class="btn btn-outline btn-block" onclick="printTicket()">🖨️ Напечатать Билет</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Логика Исполнения (JavaScript) -->
+    <script>
+        // Предустановленные базовые маршруты
+        const defaultRoutes = [
+            {
+                id: 'route_uzd_1',
+                name: 'УЗД: Сосновый Бор — Крутоборка',
+                transport: 'uzd',
+                farePerStop: 0.50,
+                minPrice: 1.00,
+                stops: ['Сосновый Бор', 'Лельма', 'Крутоборка']
+            },
+            {
+                id: 'route_train_1',
+                name: 'Главная Линия ЖД',
+                transport: 'train',
+                farePerStop: 0.80,
+                minPrice: 1.50,
+                stops: ['Вокзал-Главный', 'Семёново', 'Пригородная', 'Депо-Западное']
+            },
+            {
+                id: 'route_bus_1',
+                name: 'Маршрут №1 (Городской)',
+                transport: 'bus',
+                farePerStop: 0.45,
+                minPrice: 0.90,
+                stops: ['Автовокзал', 'Площадь Победы', 'Заводская', 'Парковая']
+            }
+        ];
+
+        // Полная инициализация базы данных с автозагрузкой из localStorage
+        let state = {
+            routes: JSON.parse(localStorage.getItem('conductor_routes')) || defaultRoutes,
+            tickets: JSON.parse(localStorage.getItem('conductor_tickets')) || [],
+            shiftActive: localStorage.getItem('conductor_shift_active') === 'true',
+            conductorName: localStorage.getItem('conductor_name') || 'Кондуктор №1',
+            terminalID: localStorage.getItem('conductor_terminal_id') || 'POS-88',
+            orgName: localStorage.getItem('conductor_org_name') || 'Узкоколейная ЖД',
+            ticketFooter: localStorage.getItem('conductor_ticket_footer') || 'Счастливого пути!',
+            paperWidth: localStorage.getItem('conductor_paper_width') || '58mm',
+            lastTicketNum: parseInt(localStorage.getItem('conductor_last_num')) || 1001
+        };
+
+        // Живые часы
+        setInterval(() => {
+            const d = new Date();
+            document.getElementById('liveClock').innerText = d.toLocaleTimeString('ru-RU');
+        }, 1000);
+
+        // Звуковой сигнал терминала (Web Audio API)
+        function soundBeep(freq = 880, duration = 80) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.value = freq;
+                gain.gain.value = 0.05;
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                setTimeout(() => { osc.stop(); ctx.close(); }, duration);
+            } catch (e) {}
+        }
+
+        // Переключение вкладок
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            const target = document.getElementById(`tab-${tabId}`);
+            if (target) target.classList.add('active');
+
+            if (btn) {
+                btn.classList.add('active');
+            } else if (window.event && window.event.currentTarget) {
+                window.event.currentTarget.classList.add('active');
+            }
+            soundBeep(1200, 40);
+        }
+
+        // Обновление списка маршрутов в фильтрах
+        function updateRouteDropdowns() {
+            const select = document.getElementById('routeSelect');
+            const currentTransport = document.getElementById('transportType').value;
+            select.innerHTML = '';
+
+            const filtered = state.routes.filter(r => r.transport === currentTransport);
+            
+            if (filtered.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.innerText = '-- Нет маршрутов для данного транспорта --';
+                select.appendChild(opt);
+            } else {
+                filtered.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.id;
+                    opt.innerText = r.name;
+                    select.appendChild(opt);
+                });
+            }
+            onRouteSelect();
+        }
+
+        function onTransportTypeChange() {
+            const transport = document.getElementById('transportType').value;
+            const labelEl = document.getElementById('currentTransportLabel');
+            const selectEl = document.getElementById('transportType');
+            labelEl.innerText = selectEl.options[selectEl.selectedIndex].text;
+            
+            // Номер рейса/поезда по умолчанию
+            if(transport === 'uzd') document.getElementById('trainNumInput').value = '№601 УЗД';
+            else if(transport === 'train') document.getElementById('trainNumInput').value = '№7042/7148';
+            else if(transport === 'bus') document.getElementById('trainNumInput').value = 'Автобус №1';
+            else if(transport === 'trolley') document.getElementById('trainNumInput').value = 'Троллейбус №5';
+            else if(transport === 'tram') document.getElementById('trainNumInput').value = 'Трамвай №3';
+            else if(transport === 'minibus') document.getElementById('trainNumInput').value = 'Маршрутка №15';
+
+            updateRouteDropdowns();
+        }
+
+        function onRouteSelect() {
+            const routeId = document.getElementById('routeSelect').value;
+            const route = state.routes.find(r => r.id === routeId);
+            const fromSelect = document.getElementById('stationFrom');
+            const toSelect = document.getElementById('stationTo');
+
+            fromSelect.innerHTML = '';
+            toSelect.innerHTML = '';
+
+            if (route && route.stops && route.stops.length > 0) {
+                route.stops.forEach((stop) => {
+                    fromSelect.appendChild(new Option(stop, stop));
+                    toSelect.appendChild(new Option(stop, stop));
+                });
+                if(route.stops.length > 1) {
+                    toSelect.selectedIndex = route.stops.length - 1;
+                }
+            }
+            recalculatePrice();
+        }
+
+        // Авторасчёт стоимости поездки по остановкам
+        function recalculatePrice() {
+            const routeId = document.getElementById('routeSelect').value;
+            const route = state.routes.find(r => r.id === routeId);
+            const from = document.getElementById('stationFrom').value;
+            const to = document.getElementById('stationTo').value;
+            const passType = document.getElementById('passengerType').value;
+
+            if (!route || !from || !to || from === to) {
+                document.getElementById('ticketPrice').value = '0.00';
+                updatePreview();
+                return;
+            }
+
+            const idx1 = route.stops.indexOf(from);
+            const idx2 = route.stops.indexOf(to);
+            const stopCount = Math.abs(idx2 - idx1);
+
+            let price = Math.max(route.minPrice, stopCount * route.farePerStop);
+
+            // Скидка по типу пассажира
+            if (passType === 'child') price *= 0.5;
+            else if (passType === 'lgt') price = 0.00;
+
+            document.getElementById('ticketPrice').value = price.toFixed(2);
+            updatePreview();
+        }
+
+        // Выравнивание текста по центру для чека
+        function centerText(text, width = 30) {
+            text = String(text || '');
+            if (text.length >= width) return text;
+            const left = Math.floor((width - text.length) / 2);
+            return ' '.repeat(left) + text;
+        }
+
+        // Компактная генерация билета без лишнего расхода бумаги
+        function generateTicketText() {
+            const org = document.getElementById('orgName').value.trim() || state.orgName;
+            const trainNum = document.getElementById('trainNumInput').value.trim();
+            const from = document.getElementById('stationFrom').value || 'Станция A';
+            const to = document.getElementById('stationTo').value || 'Станция B';
+            const price = parseFloat(document.getElementById('ticketPrice').value || 0).toFixed(2);
+            const passTypeSelect = document.getElementById('passengerType');
+            const passTypeLabel = passTypeSelect.options[passTypeSelect.selectedIndex].text;
+            const seat = document.getElementById('seatInput').value.trim();
+            const note = document.getElementById('ticketNoteInput').value.trim();
+            const footer = document.getElementById('ticketFooter').value.trim() || state.ticketFooter;
+            const dateStr = new Date().toLocaleString('ru-RU');
+            const ticketNo = state.lastTicketNum;
+
+            let lines = [];
+            lines.push(centerText(org));
+            lines.push(centerText(`БИЛЕТ № ${ticketNo}`));
+            lines.push(`------------------------------`);
+            lines.push(`${from} -> ${to}`);
+            if (trainNum) lines.push(`Рейс: ${trainNum}`);
+            if (seat) lines.push(`Место: ${seat}`);
+            lines.push(`Тариф: ${passTypeLabel}`);
+            if (note) lines.push(`Прим: ${note}`);
+            lines.push(`СУММА: ${price} руб.`);
+            lines.push(`------------------------------`);
+            lines.push(`${dateStr}`);
+            if (footer) lines.push(centerText(footer));
+
+            return lines.join('\n');
+        }
+
+        function updatePreview() {
+            document.getElementById('ticketPreview').innerText = generateTicketText();
+        }
+
+        // Продажа билета и сохранение в журнал
+        function processTicketSale() {
+            if (!state.shiftActive) {
+                alert("Ошибка: Смена закрыта! Откройте смену во вкладке 'Журнал & Z-Отчёт'.");
+                return;
+            }
+
+            const routeId = document.getElementById('routeSelect').value;
+            const routeObj = state.routes.find(r => r.id === routeId);
+
+            const ticketData = {
+                num: state.lastTicketNum,
+                time: new Date().toLocaleTimeString('ru-RU'),
+                route: routeObj ? routeObj.name : 'Фиксированный',
+                from: document.getElementById('stationFrom').value || 'Пункт А',
+                to: document.getElementById('stationTo').value || 'Пункт Б',
+                price: parseFloat(document.getElementById('ticketPrice').value || 0)
+            };
+
+            state.tickets.push(ticketData);
+            state.lastTicketNum++;
+
+            // Сохранение истории билетов и счетчика в localStorage
+            localStorage.setItem('conductor_tickets', JSON.stringify(state.tickets));
+            localStorage.setItem('conductor_last_num', state.lastTicketNum.toString());
+
+            soundBeep(1500, 120);
+            updateShiftStats();
+            updatePreview();
+            alert(`Билет №${ticketData.num} успешно продан и внесён в память смены!`);
+        }
+
+        // Быстрый выпуск билета
+        function quickIssue(title, price) {
+            document.getElementById('ticketPrice').value = price.toFixed(2);
+            document.getElementById('ticketNoteInput').value = title;
+            updatePreview();
+            processTicketSale();
+        }
+
+        // Обновление показателей смены
+        function updateShiftStats() {
+            const totalCount = state.tickets.length;
+            const totalRev = state.tickets.reduce((sum, t) => sum + (t.price || 0), 0);
+
+            document.getElementById('totalShiftTickets').innerText = totalCount;
+            document.getElementById('totalShiftRevenue').innerText = `${totalRev.toFixed(2)} руб.`;
+
+            // Обновление таблицы журнала
+            const tbody = document.getElementById('ticketHistoryBody');
+            tbody.innerHTML = '';
+            state.tickets.slice().reverse().forEach(t => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>№${t.num}</strong></td>
+                    <td>${t.time}</td>
+                    <td>${t.route || 'Быстрый'}</td>
+                    <td>${t.from} ➔ ${t.to}</td>
+                    <td style="color:var(--accent-green); font-weight:700">${(t.price || 0).toFixed(2)} руб.</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Подсчёт начальной кассы при открытии смены
+        function readCashStart() {
+            const ids = {'500':'cash500','200':'cash200','100':'cash100','50':'cash50','20':'cash20','10':'cash10','5':'cash5','2':'cash2','1':'cash1','0.50':'cash050','0.20':'cash020','0.10':'cash010','0.05':'cash005'};
+            let total = 0;
+            Object.entries(ids).forEach(([nom,id]) => {
+                const el = document.getElementById(id);
+                if (el) total += Number(nom) * Math.max(0, Number(el.value || 0));
+            });
+            const out = document.getElementById('cashStartTotal');
+            if (out) out.textContent = total.toFixed(2);
+            return total;
+        }
+
+        document.addEventListener('input', e => {
+            if (e.target && e.target.id && e.target.id.startsWith('cash')) readCashStart();
+        });
+
+        // Управление Кассовой Сменой
+        function openShift() {
+            state.shiftActive = true;
+            localStorage.setItem('conductor_shift_active', 'true');
+
+            const badge = document.getElementById('shiftBadge');
+            badge.className = 'badge badge-active';
+            badge.innerText = 'СМЕНА ОТКРЫТА';
+
+            soundBeep(1000, 100);
+            alert("Кассовая смена открыта.");
+        }
+
+        function closeShift() {
+            if (!confirm("Вы действительно хотите закрыть смену и сформировать Z-Отчёт?")) return;
+
+            const totalCount = state.tickets.length;
+            const totalRev = state.tickets.reduce((sum, t) => sum + (t.price || 0), 0);
+
+            let zReportText = [];
+            zReportText.push(`------------------------------`);
+            zReportText.push(centerText(`*** Z-ОТЧЕТ ЗАКРЫТИЯ ***`));
+            zReportText.push(`------------------------------`);
+            zReportText.push(`Орг: ${document.getElementById('orgName').value || state.orgName}`);
+            zReportText.push(`POS: ${document.getElementById('terminalID').value || state.terminalID}`);
+            zReportText.push(`Кондуктор: ${document.getElementById('conductorName').value || state.conductorName}`);
+            zReportText.push(`Дата: ${new Date().toLocaleString('ru-RU')}`);
+            zReportText.push(`------------------------------`);
+            zReportText.push(`Всего билетов: ${totalCount}`);
+            zReportText.push(`ВЫРУЧКА: ${totalRev.toFixed(2)} руб.`);
+            zReportText.push(`------------------------------`);
+
+            document.getElementById('ticketPreview').innerText = zReportText.join('\n');
+            
+            state.shiftActive = false;
+            localStorage.setItem('conductor_shift_active', 'false');
+
+            const badge = document.getElementById('shiftBadge');
+            badge.className = 'badge badge-closed';
+            badge.innerText = 'СМЕНА ЗАКРЫТА';
+
+            soundBeep(400, 300);
+        }
+
+        // Конструктор маршрутов
+        function addNewRoute() {
+            const name = document.getElementById('newRouteName').value.trim();
+            const transport = document.getElementById('newRouteTransport').value;
+            const farePerStop = parseFloat(document.getElementById('newRouteFarePerStop').value || 0);
+            const minPrice = parseFloat(document.getElementById('newRouteMinPrice').value || 0);
+            const stopsRaw = document.getElementById('newRouteStops').value.trim();
+
+            if (!name || !stopsRaw) {
+                alert("Заполните название маршрута и список остановок!");
+                return;
+            }
+
+            const stops = stopsRaw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+            const newRoute = {
+                id: 'route_' + Date.now(),
+                name: name,
+                transport: transport,
+                farePerStop: farePerStop,
+                minPrice: minPrice,
+                stops: stops
+            };
+
+            state.routes.push(newRoute);
+            localStorage.setItem('conductor_routes', JSON.stringify(state.routes));
+
+            renderRoutesTable();
+            updateRouteDropdowns();
+            soundBeep(1200, 80);
+            alert(`Маршрут "${name}" успешно сохранен!`);
+
+            document.getElementById('newRouteName').value = '';
+            document.getElementById('newRouteStops').value = '';
+        }
+
+        function deleteRoute(id) {
+            if (!confirm("Удалить этот маршрут из памяти?")) return;
+            state.routes = state.routes.filter(r => r.id !== id);
+            localStorage.setItem('conductor_routes', JSON.stringify(state.routes));
+
+            renderRoutesTable();
+            updateRouteDropdowns();
+        }
+
+        function renderRoutesTable() {
+            const tbody = document.getElementById('routesTableBody');
+            tbody.innerHTML = '';
+            state.routes.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${r.name}</strong></td>
+                    <td>${r.transport.toUpperCase()}</td>
+                    <td>${r.stops.join(' ➔ ')}</td>
+                    <td>${r.farePerStop.toFixed(2)} руб.</td>
+                    <td><button class="btn btn-red" style="padding:4px 8px; font-size:0.75rem" onclick="deleteRoute('${r.id}')">❌</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Утилиты: Копирование и Печать
+        function copyTicketText() {
+            const text = document.getElementById('ticketPreview').innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                soundBeep(1400, 60);
+                alert("Текст билета скопирован в буфер! Вставьте его в мобильное приложение для Bluetooth-принтера.");
+            }).catch(() => {
+                alert("Ошибка копирования в буфер обмена.");
+            });
+        }
+
+        function printTicket() {
+            soundBeep(1000, 100);
+            window.print();
+        }
+
+        // Настройки и сохранение данных
+        function saveSettings() {
+            state.conductorName = document.getElementById('conductorName').value;
+            state.terminalID = document.getElementById('terminalID').value;
+            state.orgName = document.getElementById('orgName').value;
+            state.ticketFooter = document.getElementById('ticketFooter').value;
+
+            localStorage.setItem('conductor_name', state.conductorName);
+            localStorage.setItem('conductor_terminal_id', state.terminalID);
+            localStorage.setItem('conductor_org_name', state.orgName);
+            localStorage.setItem('conductor_ticket_footer', state.ticketFooter);
+        }
+
+        function changePaperWidth() {
+            const width = document.getElementById('paperWidthSelect').value;
+            state.paperWidth = width;
+            document.getElementById('ticketPreview').style.width = width;
+            localStorage.setItem('conductor_paper_width', width);
+        }
+
+        function exportDataJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `conductor_backup_${Date.now()}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importDataJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedState = JSON.parse(e.target.result);
+                    if (importedState && typeof importedState === 'object') {
+                        state = { ...state, ...importedState };
+                        
+                        localStorage.setItem('conductor_routes', JSON.stringify(state.routes));
+                        localStorage.setItem('conductor_tickets', JSON.stringify(state.tickets));
+                        localStorage.setItem('conductor_shift_active', state.shiftActive ? 'true' : 'false');
+                        localStorage.setItem('conductor_name', state.conductorName || '');
+                        localStorage.setItem('conductor_terminal_id', state.terminalID || '');
+                        localStorage.setItem('conductor_org_name', state.orgName || '');
+                        localStorage.setItem('conductor_ticket_footer', state.ticketFooter || '');
+                        localStorage.setItem('conductor_paper_width', state.paperWidth || '58mm');
+                        localStorage.setItem('conductor_last_num', (state.lastTicketNum || 1001).toString());
+
+                        location.reload();
+                    }
+                } catch (err) {
+                    alert("Ошибка чтения файла конфигурации JSON!");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetToDefaults() {
+            if (confirm("Вы уверены? Это сбросит все созданные маршруты и историю смены!")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        // Инициализация при старте приложения
+        window.onload = () => {
+            document.getElementById('conductorName').value = state.conductorName;
+            document.getElementById('terminalID').value = state.terminalID;
+            document.getElementById('orgName').value = state.orgName;
+            document.getElementById('ticketFooter').value = state.ticketFooter;
+            document.getElementById('paperWidthSelect').value = state.paperWidth;
+
+            // Восстановление статуса смены
+            const badge = document.getElementById('shiftBadge');
+            if (state.shiftActive) {
+                badge.className = 'badge badge-active';
+                badge.innerText = 'СМЕНА ОТКРЫТА';
+            } else {
+                badge.className = 'badge badge-closed';
+                badge.innerText = 'СМЕНА ЗАКРЫТА';
+            }
+
+            changePaperWidth();
+            renderRoutesTable();
+            onTransportTypeChange();
+            updateShiftStats();
+            updatePreview();
+        };
+    </script>
+</body>
+</html>
