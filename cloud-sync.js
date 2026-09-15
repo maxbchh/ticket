@@ -18,6 +18,7 @@
   let watcherInstalled = false;
   let originalSetItem = null;
   let originalRemoveItem = null;
+  let lastCloudData = null;
 
   function getLocal(key, def){
     const value = localStorage.getItem(key);
@@ -48,12 +49,108 @@
     if(e)e.innerHTML='<span class="sync-dot '+(ok?'sync-ok':'sync-wait')+'"></span>'+text;
   }
 
+  function keyOf(item, type){
+    if(!item || typeof item!=='object')return null;
+    if(type==='tickets') return String(item.num ?? item.number ?? item.id ?? '');
+    if(type==='routes') return String(item.id ?? item.name ?? '');
+    return String(item.id ?? item.num ?? item.number ?? '');
+  }
+
+  function stampOf(item){
+    const t=item && (item.updatedAt || item.updated_at || item.cancelledAt || item.createdAt || item.created_at);
+    const n=t ? Date.parse(t) : NaN;
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function mergeArray(local, remote, type){
+    const out=[];
+    const map=new Map();
+    const add=(item,source)=>{
+      if(!item || typeof item!=='object')return;
+      const key=keyOf(item,type);
+      if(!key){out.push(item);return;}
+      const old=map.get(key);
+      if(!old){map.set(key,{item,source});return;}
+      const a=stampOf(old.item), b=stampOf(item);
+      if(b>a || (b===a && source==='local')) map.set(key,{item,source});
+      else if(type==='tickets' && item.status==='cancelled' && old.item.status!=='cancelled') map.set(key,{item,source});
+    };
+    (remote||[]).forEach(x=>add(x,'remote'));
+    (local||[]).forEach(x=>add(x,'local'));
+    map.forEach(v=>out.push(v.item));
+    return out;
+  }
+
+  function mergeState(local, remote){
+    local=local&&typeof local==='object'?local:{};
+    remote=remote&&typeof remote==='object'?remote:{};
+    const merged={...remote,...local};
+    merged.routes=mergeArray(local.routes,remote.routes,'routes');
+    merged.tickets=mergeArray(local.tickets,remote.tickets,'tickets');
+    merged.operations=mergeArray(local.operations,remote.operations,'operations');
+    merged.compositions=mergeArray(local.compositions,remote.compositions,'compositions');
+    merged.lastTicketNum=Math.max(Number(local.lastTicketNum)||0,Number(remote.lastTicketNum)||0,1001);
+    if(local.shiftStartedAt && !remote.shiftStartedAt) merged.shiftStartedAt=local.shiftStartedAt;
+    if(local.conductorName==='Кондуктор №1' && remote.conductorName && remote.conductorName!=='Кондуктор №1') merged.conductorName=remote.conductorName;
+    if(local.terminalID==='POS-88' && remote.terminalID && remote.terminalID!=='POS-88') merged.terminalID=remote.terminalID;
+    if(local.orgName==='Узкоколейная ЖД' && remote.orgName && remote.orgName!=='Узкоколейная ЖД') merged.orgName=remote.orgName;
+    if(local.ticketFooter==='Счастливого пути!' && remote.ticketFooter && remote.ticketFooter!=='Счастливого пути!') merged.ticketFooter=remote.ticketFooter;
+    if(local.paperWidth==='58mm' && remote.paperWidth && remote.paperWidth!=='58mm') merged.paperWidth=remote.paperWidth;
+    return merged;
+  }
+
+  function writeStateToLocal(data){
+    if(!data || typeof data!=='object')return;
+    hydrating=true;
+    try{
+      if(typeof state!=='undefined')state={...state,...data};
+      const write=(k,v)=>originalSetItem(k,typeof v==='string'?v:JSON.stringify(v));
+      write('conductor_routes',data.routes||[]);
+      write('conductor_tickets',data.tickets||[]);
+      write('conductor_shift_active',data.shiftActive?'true':'false');
+      write('conductor_name',data.conductorName||'');
+      write('conductor_terminal_id',data.terminalID||'');
+      write('conductor_org_name',data.orgName||'');
+      write('conductor_ticket_footer',data.ticketFooter||'');
+      write('conductor_paper_width',data.paperWidth||'58mm');
+      write('conductor_last_num',String(data.lastTicketNum||1001));
+      write('conductor_operations',data.operations||[]);
+      write('conductor_compositions',data.compositions||[]);
+      write('conductor_current_composition',data.currentComposition||'');
+      write('conductor_shift_started_at',data.shiftStartedAt||'');
+      if(typeof renderRoutesTable==='function')renderRoutesTable();
+      if(typeof onTransportTypeChange==='function')onTransportTypeChange();
+      if(typeof updateShiftStats==='function')updateShiftStats();
+      if(typeof renderOperations==='function')renderOperations();
+      if(typeof searchTickets==='function')searchTickets();
+      if(typeof updatePreview==='function')updatePreview();
+      const ids={conductorName:'conductorName',terminalID:'terminalID',orgName:'orgName',ticketFooter:'ticketFooter',paperWidth:'paperWidthSelect'};
+      Object.entries(ids).forEach(([key,id])=>{const e=document.getElementById(id);if(e&&data[key]!==undefined)e.value=data[key]});
+      const badge=document.getElementById('shiftBadge');
+      if(badge){badge.className=data.shiftActive?'badge badge-active':'badge badge-closed';badge.innerText=data.shiftActive?'СМЕНА ОТКРЫТА':'СМЕНА ЗАКРЫТА'}
+      if(typeof changePaperWidth==='function')changePaperWidth();
+    }finally{hydrating=false}
+  }
+
+  async function fetchCloud(){
+    const r=await fetch(URL+'?select=data,updated_at&id=eq.'+encodeURIComponent(ROW),{headers:{'apikey':KEY,'Authorization':'Bearer '+KEY},cache:'no-store'});
+    if(!r.ok)throw new Error('GET '+r.status);
+    const rows=await r.json();
+    return rows&&rows[0] ? rows[0] : null;
+  }
+
   async function saveNow(){
     if(saving){queued=true;return;}
     saving=true;
     try{
-      const r=await fetch(URL,{method:'POST',headers:{...headers,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id:ROW,data:stateFromLocal(),updated_at:new Date().toISOString()})});
+      const local=stateFromLocal();
+      let remote=null;
+      try{remote=await fetchCloud()}catch(_){remote=null}
+      const merged=remote&&remote.data&&Object.keys(remote.data).length ? mergeState(local,remote.data) : local;
+      writeStateToLocal(merged);
+      const r=await fetch(URL,{method:'POST',headers:{...headers,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id:ROW,data:merged,updated_at:new Date().toISOString()})});
       if(!r.ok)throw new Error('POST '+r.status);
+      lastCloudData=merged;
       setStatus('☁️ Синхронизировано',true);
     }catch(e){console.error('Cloud sync:',e);setStatus('⚠️ Ошибка синхронизации',false)}
     finally{saving=false;if(queued){queued=false;saveNow()}}
@@ -82,58 +179,26 @@
     };
   }
 
-  function applyRemote(remote){
-    if(!remote || typeof remote!=='object' || !Array.isArray(remote.routes))return false;
-    hydrating=true;
+  async function pullAndMerge(reason){
     try{
-      if(typeof state==='undefined')return false;
-      state={...state,...remote};
-      if(!Array.isArray(state.routes))state.routes=[];
-      if(!Array.isArray(state.tickets))state.tickets=[];
-      if(!Array.isArray(state.operations))state.operations=[];
-      if(!Array.isArray(state.compositions))state.compositions=[];
-      if(typeof state.lastTicketNum!=='number')state.lastTicketNum=1001;
-      const write=(k,v)=>originalSetItem(k,typeof v==='string'?v:JSON.stringify(v));
-      write('conductor_routes',state.routes);
-      write('conductor_tickets',state.tickets);
-      write('conductor_shift_active',state.shiftActive?'true':'false');
-      write('conductor_name',state.conductorName||'');
-      write('conductor_terminal_id',state.terminalID||'');
-      write('conductor_org_name',state.orgName||'');
-      write('conductor_ticket_footer',state.ticketFooter||'');
-      write('conductor_paper_width',state.paperWidth||'58mm');
-      write('conductor_last_num',String(state.lastTicketNum));
-      write('conductor_operations',state.operations);
-      write('conductor_compositions',state.compositions);
-      write('conductor_current_composition',state.currentComposition||'');
-      write('conductor_shift_started_at',state.shiftStartedAt||'');
-      if(typeof renderRoutesTable==='function')renderRoutesTable();
-      if(typeof onTransportTypeChange==='function')onTransportTypeChange();
-      if(typeof updateShiftStats==='function')updateShiftStats();
-      if(typeof renderOperations==='function')renderOperations();
-      if(typeof searchTickets==='function')searchTickets();
-      if(typeof updatePreview==='function')updatePreview();
-      const ids={conductorName:'conductorName',terminalID:'terminalID',orgName:'orgName',ticketFooter:'ticketFooter',paperWidth:'paperWidthSelect'};
-      Object.entries(ids).forEach(([key,id])=>{const e=document.getElementById(id);if(e&&state[key]!==undefined)e.value=state[key]});
-      const badge=document.getElementById('shiftBadge');
-      if(badge){badge.className=state.shiftActive?'badge badge-active':'badge badge-closed';badge.innerText=state.shiftActive?'СМЕНА ОТКРЫТА':'СМЕНА ЗАКРЫТА'}
-      if(typeof changePaperWidth==='function')changePaperWidth();
-      return true;
-    }finally{hydrating=false}
-  }
-
-  async function pullNow(){
-    try{
-      setStatus('☁️ Загрузка общей базы…',true);
-      const r=await fetch(URL+'?select=data,updated_at&id=eq.'+encodeURIComponent(ROW),{headers:{'apikey':KEY,'Authorization':'Bearer '+KEY}});
-      if(!r.ok)throw new Error('GET '+r.status);
-      const rows=await r.json();
-      const row=rows&&rows[0];
+      setStatus('☁️ Синхронизация…',true);
+      const row=await fetchCloud();
+      const local=stateFromLocal();
       if(row&&row.data&&Object.keys(row.data).length){
-        applyRemote(row.data);
-        setStatus('☁️ Общая база загружена',true);
-      }else setStatus('☁️ Готово к синхронизации',true);
-    }catch(e){console.error('Cloud pull:',e);setStatus('⚠️ Не удалось загрузить общую базу',false)}
+        const merged=mergeState(local,row.data);
+        const localChanged=JSON.stringify(merged)!==JSON.stringify(row.data);
+        writeStateToLocal(merged);
+        lastCloudData=merged;
+        if(localChanged){
+          const r=await fetch(URL,{method:'POST',headers:{...headers,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id:ROW,data:merged,updated_at:new Date().toISOString()})});
+          if(!r.ok)throw new Error('POST '+r.status);
+        }
+      }else if(local.routes.length||local.tickets.length||local.operations.length){
+        await saveNow();
+        return;
+      }
+      setStatus(reason==='focus'?'☁️ Синхронизировано':'☁️ Общая база синхронизирована',true);
+    }catch(e){console.error('Cloud pull:',e);setStatus('⚠️ Ошибка синхронизации',false)}
   }
 
   function routeNameReverse(name){
@@ -173,7 +238,7 @@
     const sameName=(state.routes||[]).some(r=>String(r.name).trim()===reverseName&&r.transport===transport&&JSON.stringify(r.stops||[])===JSON.stringify(stops.slice().reverse()));
     if(editingRouteId && typeof editRoute==='function'){
       const current=state.routes.find(r=>r.id===editingRouteId);
-      if(current){current.name=name;current.transport=transport;current.farePerStop=fare;current.minPrice=min;current.stops=stops;localStorage.setItem('conductor_routes',JSON.stringify(state.routes));
+      if(current){current.name=name;current.transport=transport;current.farePerStop=fare;current.minPrice=min;current.stops=stops;
         if(!sameName)state.routes.push({id:'route_'+Date.now()+'_rev',name:reverseName,transport,farePerStop:fare,minPrice:min,stops:stops.slice().reverse()});
       }
     }else{
@@ -197,7 +262,13 @@
     window.forceReliableCloudSync=saveNow;
     window.syncConductorData=saveNow;
     addReverseRouteButton();
-    pullNow();
+    // Take control of legacy hooks after they have been registered, but do not wait for them before merging local data.
+    window.ticketCloudSave=saveNow;
+    pullAndMerge('startup');
+    setTimeout(()=>{window.ticketCloudSave=saveNow;window.forceReliableCloudSync=saveNow;window.syncConductorData=saveNow;},350);
+    window.addEventListener('focus',()=>pullAndMerge('focus'));
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pullAndMerge('focus')});
+    window.addEventListener('beforeunload',()=>{if(!hydrating)saveNow()});
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
