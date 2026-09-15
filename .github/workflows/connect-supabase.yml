@@ -1,1 +1,22 @@
-# Temporary workflow removed after build. This file is intentionally empty.
+name: Temporary restore index
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  restore:
+    if: github.event.head_commit.message != 'Restore enhanced index from history'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore
+        run: |
+          git show ff62abaf903fef205adb762ca1764b31a98b1d86 > index.html
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Restore enhanced index from history"
+          git push
