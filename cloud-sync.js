@@ -179,11 +179,11 @@
     };
   }
 
-  async function pullAndMerge(reason){
+  async function pullAndMerge(reason, baseLocal=null){
     try{
       setStatus('☁️ Синхронизация…',true);
+      const local=baseLocal||stateFromLocal();
       const row=await fetchCloud();
-      const local=stateFromLocal();
       if(row&&row.data&&Object.keys(row.data).length){
         const merged=mergeState(local,row.data);
         const localChanged=JSON.stringify(merged)!==JSON.stringify(row.data);
@@ -262,9 +262,10 @@
     window.forceReliableCloudSync=saveNow;
     window.syncConductorData=saveNow;
     addReverseRouteButton();
-    // Take control of legacy hooks after they have been registered, but do not wait for them before merging local data.
+    // Preserve the local snapshot before legacy inline sync code can overwrite it.
     window.ticketCloudSave=saveNow;
-    pullAndMerge('startup');
+    const startupLocal=stateFromLocal();
+    pullAndMerge('startup',startupLocal);
     setTimeout(()=>{window.ticketCloudSave=saveNow;window.forceReliableCloudSync=saveNow;window.syncConductorData=saveNow;},350);
     window.addEventListener('focus',()=>pullAndMerge('focus'));
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pullAndMerge('focus')});
