@@ -1,4 +1,4 @@
-name: Temporary restore index
+name: Restore enhanced index
 on:
   push:
     branches: [main]
@@ -6,17 +6,20 @@ permissions:
   contents: write
 jobs:
   restore:
-    if: github.event.head_commit.message != 'Restore enhanced index from history'
+    if: github.event.head_commit.message != 'Restore enhanced index safely'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Restore
+      - name: Find and restore enhanced index
         run: |
-          git show ff62abaf903fef205adb762ca1764b31a98b1d86 > index.html
+          C=$(git log --all --format='%H%x09%s' | awk -F '\t' '$2=="Build full conductor terminal"{print $1; exit}')
+          echo "Found $C"
+          test -n "$C"
+          git checkout "$C" -- index.html
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
-          git commit -m "Restore enhanced index from history"
+          git commit -m "Restore enhanced index safely"
           git push
