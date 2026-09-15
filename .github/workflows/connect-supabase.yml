@@ -1,42 +1,32 @@
-name: One-time refund print patch
+name: Finalize refund feature
 on:
   push:
     branches: [main]
 permissions:
   contents: write
 jobs:
-  patch:
-    if: github.event.head_commit.message == 'Run refund patch'
+  finalize:
+    if: github.event.head_commit.message == 'Finalize refund feature'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Add refund printing to index.html
+      - name: Fix refund print HTML and remove temporary files
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
-          marker='/* REFUND_PRINT_V2 */'
-          if marker in s:
-              raise SystemExit('already patched')
-          css='''<style>\n.refund-modal{position:fixed;inset:0;background:rgba(0,0,0,.38);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px}.refund-dialog{width:min(430px,100%);background:#fff;border-radius:18px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.25)}.refund-dialog h3{margin-bottom:8px;color:#e53935}.refund-dialog p{margin-bottom:14px;color:#657087}</style>'''
-          js=r'''<script>/* REFUND_PRINT_V2 */
-          (function(){
-            function save(){localStorage.setItem('conductor_tickets',JSON.stringify(state.tickets));localStorage.setItem('conductor_operations',JSON.stringify(state.operations||[]));if(window.ticketCloudSave)window.ticketCloudSave()}
-            function showRefundDialog(t){document.getElementById('refundConfirmModal')?.remove();const m=document.createElement('div');m.id='refundConfirmModal';m.className='refund-modal';m.innerHTML='<div class="refund-dialog"><h3>↩️ Возврат подтверждён</h3><p>Билет №'+t.num+' аннулирован.<br>Сумма возврата: <strong>'+Number(t.refund||t.price||0).toFixed(2)+' руб.</strong></p><div class="ops-actions"><button class="btn btn-cyan" onclick="printRefund('+t.num+');document.getElementById(\'refundConfirmModal\').remove()">🖨️ Печать возврата</button><button class="btn btn-outline" onclick="document.getElementById(\'refundConfirmModal\').remove()">Закрыть</button></div></div>';document.body.appendChild(m)}
-            window.printRefund=function(num){const t=state.tickets.find(x=>Number(x.num)===Number(num));if(!t)return;t.refundPrinted=true;t.refundPrintedAt=new Date().toLocaleString('ru-RU');(state.operations||[]).forEach(o=>{if(Number(o.ticket)===Number(t.num)&&(o.type==='Возврат'||o.type==='Аннулирование'))o.printed=true});(state.refunds||[]).forEach(o=>{if(Number(o.num)===Number(t.num))o.printed=true});const old=document.getElementById('ticketPreview').innerText;document.getElementById('ticketPreview').innerText=['------------------------------',centerText('ЧЕК ВОЗВРАТА'),centerText('БИЛЕТ № '+t.num),'------------------------------','Билет: '+t.from+' -> '+t.to,'Рейс: '+(t.route||''),'СТОИМОСТЬ: '+Number(t.price||0).toFixed(2)+' руб.','ВОЗВРАТ: '+Number(t.refund||t.price||0).toFixed(2)+' руб.','Причина: '+(t.cancelReason||'Не указана'),'------------------------------','ПЕЧАТЬ ВОЗВРАТА: '+t.refundPrintedAt].join('\n');save();renderOperations();searchTickets();soundBeep(900,100);window.print();setTimeout(()=>{document.getElementById('ticketPreview').innerText=old;updatePreview()},500)};
-            window.cancelTicket=function(num){const t=state.tickets.find(x=>Number(x.num)===Number(num));if(!t||t.status==='cancelled')return;const reason=prompt('Причина аннулирования:','Ошибка оформления');if(reason===null)return;t.status='cancelled';t.cancelReason=reason;t.refund=Number(t.price||0);t.refundPrinted=false;t.cancelledAt=new Date().toLocaleString('ru-RU');state.refunds=Array.isArray(state.refunds)?state.refunds:[];state.refunds.push({num:t.num,amount:t.refund,reason,time:t.cancelledAt,printed:false});state.operations=Array.isArray(state.operations)?state.operations:[];state.operations.push({time:t.cancelledAt,type:'Возврат',ticket:t.num,amount:-t.refund,conductor:state.conductorName||'Кондуктор',details:reason,printed:false});save();updateShiftStats();renderOperations();searchTickets();showRefundDialog(t)};
-            window.searchTickets=function(){const n=(document.getElementById('ticketSearchNum')?.value||'').trim(),q=(document.getElementById('ticketSearchText')?.value||'').toLowerCase().trim(),box=document.getElementById('ticketSearchResults');if(!box)return;const a=state.tickets.filter(t=>(!n||String(t.num)===n)&&(!q||JSON.stringify(t).toLowerCase().includes(q))).slice().reverse();box.innerHTML=a.length?a.map(t=>'<div class="feature-stat" style="margin-top:8px"><strong>Билет №'+t.num+'</strong> — '+t.from+' → '+t.to+' — '+Number(t.price||0).toFixed(2)+' руб. — <span class="'+(t.status==='cancelled'?'status-cancelled':'status-active')+'">'+(t.status==='cancelled'?'АННУЛИРОВАН':'ДЕЙСТВИТЕЛЕН')+'</span><div class="ops-actions" style="margin-top:8px">'+(t.status==='cancelled'?'<button class="btn btn-cyan mini-btn" onclick="printRefund('+t.num+')">🖨️ Печать возврата</button>':'<button class="btn btn-outline mini-btn" onclick="reprintTicket('+t.num+')">♻️ Повторить печать</button><button class="btn btn-red mini-btn" onclick="cancelTicket('+t.num+')">❌ Аннулировать</button>')+'</div></div>').join(''):'<p style="color:var(--text-secondary)">Билеты не найдены.</p>'};
-            window.renderOperations=function(){const b=document.getElementById('operationsBody');if(b)b.innerHTML=(state.operations||[]).slice().reverse().map(o=>{const refund=o.type==='Возврат'||o.type==='Аннулирование',t=state.tickets.find(x=>Number(x.num)===Number(o.ticket)),printed=(t&&t.refundPrinted)||o.printed;return '<tr><td>'+o.time+'</td><td>'+o.type+'</td><td>'+o.ticket+'</td><td>'+Number(o.amount||0).toFixed(2)+' руб.</td><td>'+o.conductor+'</td><td>'+(refund?(printed?'🖨️ ПЕЧАТЬ ПОСТАВЛЕНА':'<button class="btn btn-cyan mini-btn" onclick="printRefund('+(o.ticket||0)+')">🖨️ Печать</button>'):'')+'</td></tr>'}).join('');const active=state.tickets.filter(t=>t.status!=='cancelled'),cancelled=state.tickets.filter(t=>t.status==='cancelled'),rev=active.reduce((a,t)=>a+Number(t.price||0),0),ref=cancelled.reduce((a,t)=>a+Number(t.refund||t.price||0),0);['opActiveTickets','opCancelledTickets','opRevenue','opRefunds'].forEach((id,i)=>{const e=document.getElementById(id);if(e)e.textContent=[active.length,cancelled.length,rev.toFixed(2)+' руб.',ref.toFixed(2)+' руб.'][i]})};
-            const h=document.querySelector('#operationsBody')?.closest('table')?.querySelector('thead tr');if(h&&!h.querySelector('.refund-print-head')){const x=document.createElement('th');x.className='refund-print-head';x.textContent='Печать';h.appendChild(x)}
-          })();</script>'''
-          s=s.replace('</style>',css+'</style>',1).replace('</body>',js+'</body>',1)
+          s=s.replace('</style></style>','</style>')
+          s=s.replace("<script>window.__refundPrintPatch=true;</script>","")
+          s=s.replace("join('\\\\n')", "join('\\n')")
           p.write_text(s,encoding='utf-8')
+          Path('README.md').write_text('',encoding='utf-8')
+          Path('.github/workflows/connect-supabase.yml').unlink()
           PY
-      - name: Commit refund feature
+      - name: Commit final version
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          git commit -m "Refund print feature" || exit 0
+          git add -A
+          git commit -m "Finalize refund feature" || exit 0
           git push
