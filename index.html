@@ -105,7 +105,6 @@ function addCurrentToBasket(){
   pendingSales.push(d);
   renderPendingSales();
   soundBeep(1200,60);
-  alert('Билет добавлен в текущую покупку: '+d.from+' → '+d.to);
 }
 function addPendingSale(){return addCurrentToBasket()}
 function sellPendingSales(){
@@ -245,9 +244,27 @@ function openStandaloneCalculator(){
 }
 function openCashRegister(){
  if(!state.shiftActive){alert('Ошибка: Смена закрыта! Откройте смену.');return}
- if(!(window.pendingSales||[]).length){alert('Сначала добавьте билет кнопкой «➕ Добавить билет».');return}
- window.cashState.total=window.pendingSales.reduce((s,x)=>s+Number(x.price||0),0);window.cashState.display='0';window.cashState.standalone=false;window.cashState.left=null;window.cashState.operator=null;window.cashState.newInput=true;window.cashState.paymentMethod='cash';
- document.getElementById('cashItems').innerHTML=cashItemsHtml();document.getElementById('cashModal').style.display='flex';cashRefresh();
+ const items=Array.isArray(window.pendingSales)?window.pendingSales:[];
+ if(!items.length){alert('Сначала добавьте билет в текущую покупку.');return}
+ const total=items.reduce((sum,item)=>sum+Math.max(0,Number(item.price)||0),0);
+ window.cashState={
+   display:'0',
+   left:null,
+   operator:null,
+   newInput:true,
+   total:total,
+   standalone:false,
+   paymentMethod:'cash'
+ };
+ const itemsBox=document.getElementById('cashItems');
+ const totalBox=document.getElementById('cashTotal');
+ const changeBox=document.getElementById('cashChange');
+ const modal=document.getElementById('cashModal');
+ if(itemsBox)itemsBox.innerHTML='<div class="feature-stat"><strong>ТЕКУЩАЯ ПОКУПКА</strong><br>'+items.map((x,i)=>(i+1)+'. '+x.from+' → '+x.to+' — '+Number(x.price||0).toFixed(2)+' руб.').join('<br>')+'<hr><strong>ВСЕГО К ОПЛАТЕ: '+total.toFixed(2)+' руб.</strong></div>';
+ if(totalBox)totalBox.textContent=total.toFixed(2)+' руб.';
+ if(changeBox)changeBox.textContent='0.00 руб.';
+ if(modal)modal.style.display='flex';
+ cashRefresh();
 }
 function openCashRegisterForCurrentTicket(){
  if(!state.shiftActive){alert('Ошибка: Смена закрыта! Откройте смену.');return}
