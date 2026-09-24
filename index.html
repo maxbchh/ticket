@@ -223,13 +223,50 @@ function openCashRegisterForCurrentTicket(){
  pendingSales.push(d);renderPendingSales();openCashRegister();
 }
 function closeCashRegister(){document.getElementById('cashManualTotalBox').style.display='none';const m=document.getElementById('cashModal');if(m)m.style.display='none';window.cashState.standalone=false;document.querySelector('#cashModal .btn-green').style.display='';document.querySelector('#cashModal .btn-outline[onclick="cashSetExact()"]').style.display=''}
+function cardPaymentError(){
+ const errors=[
+  {type:'retry',text:'❌ ОПЛАТА ОТКЛОНЕНА\nНедостаточно средств на карте.\nПопробуйте оплатить повторно.'},
+  {type:'retry',text:'❌ ОПЛАТА ОТКЛОНЕНА\nНе удалось связаться с банком.\nПопробуйте оплатить повторно.'},
+  {type:'retry',text:'❌ ОПЛАТА ОТКЛОНЕНА\nОшибка чтения карты.\nПриложите карту повторно.'},
+  {type:'retry',text:'❌ ОПЛАТА ОТКЛОНЕНА\nОперация отклонена банком.\nПопробуйте оплатить повторно.'},
+  {type:'cancel',text:'⚠️ КАРТА АННУЛИРОВАНА\nСрок действия карты истёк.\nБилет(ы) не оформлены.'},
+  {type:'retry',text:'❌ ОПЛАТА ОТКЛОНЕНА\nПревышен лимит операции.\nПопробуйте оплатить повторно.'}
+ ];
+ const roll=Math.random();
+ // Ошибка примерно в 1 из 9 оплат. Среди ошибок чаще встречается обычная ошибка с повторной оплатой.
+ if(roll>=1/9)return null;
+ const retryErrors=errors.filter(x=>x.type==='retry'),cancelErrors=errors.filter(x=>x.type==='cancel');
+ // Истёкшая карта встречается реже, остальные ошибки — чаще.
+ if(Math.random()<0.18)return cancelErrors[Math.floor(Math.random()*cancelErrors.length)];
+ return retryErrors[Math.floor(Math.random()*retryErrors.length)];
+}
+function cancelPendingCardPayment(reason){
+ const items=window.pendingSales||[];
+ const now=new Date().toLocaleString('ru-RU');
+ if(items.length){
+   items.forEach(d=>{d.paymentError=reason;d.paymentCancelledAt=now});
+ }
+ window.pendingSales=[];
+ renderPendingSales();
+ closeCashRegister();
+}
 function payCash(){
  const total=Number(window.cashState.total||0),received=Number(window.cashState.display||0);
  if(window.cashState.paymentMethod==='card'){
    if(!(window.pendingSales||[]).length){closeCashRegister();return}
+   const error=cardPaymentError();
+   if(error){
+     if(error.type==='cancel'){
+       cancelPendingCardPayment(error.text);
+       alert(error.text);
+     }else{
+       alert(error.text);
+     }
+     return;
+   }
    const itemsCount=window.pendingSales.length;
    closeCashRegister();sellPendingSales();
-   alert('Оплата картой принята. Билетов: '+itemsCount+'. Сумма: '+total.toFixed(2)+' руб.');
+   alert('✅ Оплата картой принята. Билетов: '+itemsCount+'. Сумма: '+total.toFixed(2)+' руб.');
    return;
  }
  if(received<total){alert('Внесено недостаточно денег.');return}
