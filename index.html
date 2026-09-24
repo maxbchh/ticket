@@ -23,7 +23,7 @@
 <div class="top-status-bar"><div class="status-title"><span>📠 ТЕРМИНАЛ КОНДУКТОРА</span><span id="shiftBadge" class="badge badge-closed">СМЕНА ЗАКРЫТА</span></div><div class="status-info"><div>Транспорт: <strong id="currentTransportLabel">Узкоколейная ЖД</strong></div><div>Продано билетов: <strong id="totalShiftTickets">0</strong></div><div>Выручка: <strong id="totalShiftRevenue">0.00 руб.</strong></div><div><span id="liveClock">00:00:00</span></div></div></div>
 <div class="tabs-nav"><button class="tab-btn active" onclick="switchTab('terminal',this)">🎟️ Выпуск Билета</button><button class="tab-btn" onclick="switchTab('routes',this)">🗺️ Конструктор Маршрутов</button><button class="tab-btn" onclick="switchTab('shift',this)">📜 Журнал & Z-Отчёт</button><button class="tab-btn" onclick="switchTab('operations',this)">🎫 Билеты и Операции</button><button class="tab-btn" onclick="switchTab('settings',this)">⚙️ Настройки Терминала</button></div>
 <div class="main-layout"><div class="left-column">
-<div id="tab-terminal" class="tab-content active"><div class="card"><div class="card-title"><span>Параметры Поездки</span><button class="btn btn-outline" onclick="soundBeep(880,80)">🔊 Тон</button></div><div class="form-grid"><div class="form-group"><label>Вид Транспорта</label><select id="transportType" onchange="onTransportTypeChange()"><option value="uzd">Узкоколейная ЖД</option><option value="train">Железная Дорога</option><option value="bus">Автобус</option><option value="trolley">Троллейбус</option><option value="tram">Трамвай</option><option value="minibus">Маршрутное Такси</option></select></div><div class="form-group"><label>Выберите Маршрут</label><select id="routeSelect" onchange="onRouteSelect()"></select></div><div class="form-group"><label>Станция Отправления (От)</label><select id="stationFrom" onchange="recalculatePrice()"></select></div><div class="form-group"><label>Станция Назначения (До)</label><select id="stationTo" onchange="recalculatePrice()"></select></div><div class="form-group"><label>Категория Пассажира</label><select id="passengerType" onchange="recalculatePrice()"><option value="full">Полный (100%)</option><option value="child">Детский / Школьный (50%)</option><option value="lgt">Льготный (0%)</option><option value="luggage">Багаж / Животные</option></select></div><div class="form-group"><label>Стоимость (руб.)</label><input type="number" step="0.01" id="ticketPrice" value="0.00" oninput="updatePreview()"></div><div class="form-group"><label>№ Поезда / Рейса</label><input type="text" id="trainNumInput" value="№601 УЗД" oninput="updatePreview()"></div><div class="form-group"><label>Вагон / Место</label><input type="text" id="seatInput" placeholder="Вагон 02, Место 14" oninput="updatePreview()"></div></div><div class="form-group full-width"><label>Дополнительное Примечание в Билете</label><input type="text" id="ticketNoteInput" placeholder="Например: Внеграфиковый поезд" oninput="updatePreview()"></div><div id="pendingSalesBox" style="margin-top:10px"></div><button class="btn btn-green btn-block" onclick="addCurrentToBasket()">➕ Добавить в покупку</button></div></div>
+<div id="tab-terminal" class="tab-content active"><div class="card"><div class="card-title"><span>Параметры Поездки</span><button class="btn btn-outline" onclick="soundBeep(880,80)">🔊 Тон</button></div><div class="form-grid"><div class="form-group"><label>Вид Транспорта</label><select id="transportType" onchange="onTransportTypeChange()"><option value="uzd">Узкоколейная ЖД</option><option value="train">Железная Дорога</option><option value="bus">Автобус</option><option value="trolley">Троллейбус</option><option value="tram">Трамвай</option><option value="minibus">Маршрутное Такси</option></select></div><div class="form-group"><label>Выберите Маршрут</label><select id="routeSelect" onchange="onRouteSelect()"></select></div><div class="form-group"><label>Станция Отправления (От)</label><select id="stationFrom" onchange="recalculatePrice()"></select></div><div class="form-group"><label>Станция Назначения (До)</label><select id="stationTo" onchange="recalculatePrice()"></select></div><div class="form-group"><label>Категория Пассажира</label><select id="passengerType" onchange="recalculatePrice()"><option value="full">Полный (100%)</option><option value="child">Детский / Школьный (50%)</option><option value="lgt">Льготный (0%)</option><option value="luggage">Багаж / Животные</option></select></div><div class="form-group"><label>Стоимость (руб.)</label><input type="number" step="0.01" id="ticketPrice" value="0.00" oninput="updatePreview()"></div><div class="form-group"><label>№ Поезда / Рейса</label><input type="text" id="trainNumInput" value="№601 УЗД" oninput="updatePreview()"></div><div class="form-group"><label>Вагон / Место</label><input type="text" id="seatInput" placeholder="Вагон 02, Место 14" oninput="updatePreview()"></div></div><div class="form-group full-width"><label>Дополнительное Примечание в Билете</label><input type="text" id="ticketNoteInput" placeholder="Например: Внеграфиковый поезд" oninput="updatePreview()"></div><div id="pendingSalesBox" style="margin-top:10px"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px"><button class="btn btn-green btn-block" type="button" onclick="processTicketSale()">🎟️ Выпустить билет</button><button class="btn btn-cyan btn-block" type="button" onclick="openCashRegister()">💵 Касса</button></div></div></div>
 </div></div>
 <div id="tab-routes" class="tab-content"><div class="card"><div class="card-title">Добавить Новый Маршрут</div><div class="form-grid"><div class="form-group"><label>Название Маршрута</label><input type="text" id="newRouteName" placeholder="Например: Линия №1"></div><div class="form-group"><label>Тип Транспорта</label><select id="newRouteTransport"><option value="uzd">Узкоколейная ЖД</option><option value="train">Железная Дорога</option><option value="bus">Автобус</option><option value="trolley">Троллейбус</option><option value="tram">Трамвай</option><option value="minibus">Маршрутное Такси</option></select></div><div class="form-group"><label>Стоимость одной остановки (руб.)</label><input type="number" step="0.01" min="0" id="newRouteFarePerStop" value="0.50"></div></div><div class="form-group full-width"><label>Остановки / станции по порядку</label><textarea id="newRouteStops" rows="5" placeholder="Столбцы, Тёмные Ляды, Кучкуны, Отцеда, Колосово"></textarea><small style="color:var(--text-secondary)">Пиши остановки через запятую в нужном порядке. Одинаковые названия разрешены.</small></div><div style="display:flex;gap:10px;flex-wrap:wrap"><button id="routeSaveButton" class="btn btn-cyan" onclick="addNewRoute()">💾 Сохранить Маршрут в Память</button><button id="routeCancelButton" class="btn btn-outline" onclick="cancelRouteEdit()" style="display:none">Отмена</button></div></div><div class="card"><div class="card-title">Сохранённые Маршруты</div><div class="table-responsive"><table><thead><tr><th>Название</th><th>Вид</th><th>Остановки</th><th>Тариф/Ост.</th><th>Действие</th></tr></thead><tbody id="routesTableBody"></tbody></table></div></div></div>
 <div id="tab-shift" class="tab-content"><div class="card"><div class="card-title">Открытие смены — начальная касса</div><div class="form-grid"><div class="form-group"><label>500</label><input type="number" min="0" value="0" id="cash500"></div><div class="form-group"><label>200</label><input type="number" min="0" value="0" id="cash200"></div><div class="form-group"><label>100</label><input type="number" min="0" value="0" id="cash100"></div><div class="form-group"><label>50</label><input type="number" min="0" value="0" id="cash50"></div><div class="form-group"><label>20</label><input type="number" min="0" value="0" id="cash20"></div><div class="form-group"><label>10</label><input type="number" min="0" value="0" id="cash10"></div><div class="form-group"><label>5</label><input type="number" min="0" value="0" id="cash5"></div><div class="form-group"><label>2</label><input type="number" min="0" value="0" id="cash2"></div><div class="form-group"><label>1</label><input type="number" min="0" value="0" id="cash1"></div><div class="form-group"><label>0,50</label><input type="number" min="0" value="0" id="cash050"></div><div class="form-group"><label>0,20</label><input type="number" min="0" value="0" id="cash020"></div><div class="form-group"><label>0,10</label><input type="number" min="0" value="0" id="cash010"></div><div class="form-group"><label>0,05</label><input type="number" min="0" value="0" id="cash005"></div></div><strong>Начальная касса: <span id="cashStartTotal">0.00</span> руб.</strong></div><div class="card"><div class="card-title">Управление Кассовой Сменой</div><div style="display:flex;gap:10px;margin-bottom:16px"><button class="btn btn-green" onclick="openShift()">🟢 Открыть Смену</button><button class="btn btn-red" onclick="closeShift()">🔴 Закрыть Смену (Z-Отчёт)</button></div><div class="form-grid"><div class="form-group"><label>Кассир / Кондуктор</label><input type="text" id="conductorName" placeholder="ФИО Кондуктора" oninput="saveSettings()"></div><div class="form-group"><label>Номер Терминала (POS)</label><input type="text" id="terminalID" placeholder="POS-01" oninput="saveSettings()"></div></div></div><div class="card"><div class="card-title">История Билетов За Смену</div><div class="table-responsive"><table><thead><tr><th>№ Билета</th><th>Время</th><th>Маршрут / Рейс</th><th>От — До</th><th>Сумма</th></tr></thead><tbody id="ticketHistoryBody"></tbody></table></div></div></div>
@@ -91,5 +91,140 @@ function refundBatch(){
   showRefundDialog({num:active.map(t=>t.num).join(', '),refund:total});
 }
 
-renderPendingSales();
-</script></body></html>
+</script>
+<style>
+#cashRegisterModal{position:fixed;inset:0;background:rgba(8,18,35,.45);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;z-index:10000;padding:14px}
+#cashRegisterModal.open{display:flex}
+.cash-register-dialog{width:min(520px,100%);max-height:92vh;overflow:auto;background:rgba(248,251,255,.96);border:1px solid rgba(255,255,255,.9);border-radius:24px;padding:18px;box-shadow:0 24px 80px rgba(20,40,80,.28)}
+.cash-register-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px;font-weight:800;font-size:1.15rem}
+.cash-register-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cash-register-box{background:rgba(255,255,255,.72);border:1px solid rgba(180,190,205,.35);border-radius:14px;padding:12px}
+.cash-register-box label{margin-bottom:6px}
+.cash-register-total{font-size:1.8rem;font-weight:800;text-align:right;margin-top:6px}
+.cash-register-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+@media(max-width:560px){.cash-register-grid{grid-template-columns:1fr}}
+</style>
+<div id="cashRegisterModal" aria-hidden="true">
+  <div class="cash-register-dialog" role="dialog" aria-modal="true" aria-labelledby="cashRegisterTitle">
+    <div class="cash-register-title">
+      <span id="cashRegisterTitle">💵 Касса — оформление оплаты</span>
+      <button class="btn btn-outline" type="button" onclick="closeCashRegister()">✕</button>
+    </div>
+    <div class="cash-register-grid">
+      <div class="cash-register-box">
+        <label>Стоимость билета</label>
+        <div class="cash-register-total" id="cashTicketTotal">0.00 руб.</div>
+      </div>
+      <div class="cash-register-box">
+        <label>Получено от пассажира</label>
+        <input id="cashReceivedInput" type="number" min="0" step="0.01" value="0.00" oninput="updateCashRegister()">
+      </div>
+    </div>
+    <div class="cash-register-grid" style="margin-top:10px">
+      <div class="cash-register-box"><span style="color:var(--text-secondary)">Способ оплаты</span><strong id="cashPaymentMethod">Наличные</strong></div>
+      <div class="cash-register-box"><span style="color:var(--text-secondary)">Сдача</span><strong id="cashChange">0.00 руб.</strong></div>
+    </div>
+    <div class="cash-register-actions">
+      <button class="btn btn-cyan" type="button" onclick="setCashExact()">Сумма билета</button>
+      <button class="btn btn-outline" type="button" onclick="setCashCard()">💳 Карта</button>
+      <button class="btn btn-green" type="button" onclick="confirmCashPayment()">✅ Оплатить и выпустить</button>
+      <button class="btn btn-outline" type="button" onclick="closeCashRegister()">Отмена</button>
+    </div>
+    <div id="cashRegisterMessage" style="margin-top:10px;color:var(--text-secondary);font-size:.85rem"></div>
+  </div>
+</div>
+<script>
+(function(){
+  window.__cashPaymentMethod = 'cash';
+
+  function cashPrice(){
+    return Math.max(0, Number(document.getElementById('ticketPrice')?.value || 0));
+  }
+
+  window.updateCashRegister = function(){
+    const price = cashPrice();
+    const received = Math.max(0, Number(document.getElementById('cashReceivedInput')?.value || 0));
+    const total = document.getElementById('cashTicketTotal');
+    const change = document.getElementById('cashChange');
+    const msg = document.getElementById('cashRegisterMessage');
+    if(total) total.textContent = price.toFixed(2) + ' руб.';
+    if(change) change.textContent = Math.max(0, received - price).toFixed(2) + ' руб.';
+    if(msg){
+      if(window.__cashPaymentMethod === 'card') msg.textContent = 'Оплата картой: сумма списывается без наличной сдачи.';
+      else if(received < price) msg.textContent = 'Внесите сумму не меньше стоимости билета.';
+      else msg.textContent = 'Сумма достаточна. Можно оформить билет.';
+    }
+  };
+
+  window.openCashRegister = function(){
+    const modal = document.getElementById('cashRegisterModal');
+    if(!modal) return;
+    window.__cashPaymentMethod = 'cash';
+    const input = document.getElementById('cashReceivedInput');
+    if(input) input.value = cashPrice().toFixed(2);
+    const method = document.getElementById('cashPaymentMethod');
+    if(method) method.textContent = 'Наличные';
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden','false');
+    updateCashRegister();
+  };
+
+  window.closeCashRegister = function(){
+    const modal = document.getElementById('cashRegisterModal');
+    if(!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden','true');
+  };
+
+  window.setCashExact = function(){
+    const input = document.getElementById('cashReceivedInput');
+    if(input) input.value = cashPrice().toFixed(2);
+    window.__cashPaymentMethod = 'cash';
+    const method = document.getElementById('cashPaymentMethod');
+    if(method) method.textContent = 'Наличные';
+    updateCashRegister();
+  };
+
+  window.setCashCard = function(){
+    window.__cashPaymentMethod = 'card';
+    const input = document.getElementById('cashReceivedInput');
+    if(input) input.value = cashPrice().toFixed(2);
+    const method = document.getElementById('cashPaymentMethod');
+    if(method) method.textContent = 'Карта';
+    updateCashRegister();
+  };
+
+  window.confirmCashPayment = function(){
+    const price = cashPrice();
+    const received = Math.max(0, Number(document.getElementById('cashReceivedInput')?.value || 0));
+
+    if(!state.shiftActive){
+      alert("Сначала откройте смену во вкладке «Журнал & Z-Отчёт».");
+      return;
+    }
+    if(window.__cashPaymentMethod === 'cash' && received < price){
+      alert('Недостаточно денег для оплаты билета.');
+      return;
+    }
+
+    const before = state.lastTicketNum;
+    processTicketSale();
+    const issued = state.tickets.some(t => Number(t.num) === Number(before));
+    if(issued){
+      closeCashRegister();
+      const change = window.__cashPaymentMethod === 'cash' ? Math.max(0, received - price).toFixed(2) : '0.00';
+      alert('Оплата принята. Билет №' + before + ' выпущен. Сдача: ' + change + ' руб.');
+    }
+  };
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') closeCashRegister();
+  });
+  document.addEventListener('click', function(e){
+    const modal = document.getElementById('cashRegisterModal');
+    if(modal && e.target === modal) closeCashRegister();
+  });
+})();
+</script>
+
+<script>window.addCurrentToBasket=window.addCurrentToBasket||function(){processTicketSale()};</script></body></html>
