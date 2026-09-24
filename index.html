@@ -131,6 +131,11 @@ renderPendingSales();
     <div>К оплате<strong id="cashTotal">0.00 руб.</strong></div>
     <div>Сдача<strong id="cashChange">0.00 руб.</strong></div>
   </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0">
+    <button id="cashMethodCash" class="btn btn-green" onclick="setPaymentMethod('cash')">💵 Наличные</button>
+    <button id="cashMethodCard" class="btn btn-outline" onclick="setPaymentMethod('card')">💳 Картой</button>
+  </div>
+  <div id="cashPaymentHint" class="feature-stat" style="margin-bottom:10px">Способ оплаты: наличные. Введите сумму, полученную от клиента.</div>
   <div class="cash-display" id="cashDisplay">0</div>
   <div class="cash-row">
     <button class="cash-key" onclick="cashDigit('7')">7</button><button class="cash-key" onclick="cashDigit('8')">8</button><button class="cash-key" onclick="cashDigit('9')">9</button><button class="cash-key op" onclick="cashOperator('/')">÷</button>
@@ -145,7 +150,7 @@ renderPendingSales();
   </div>
   <button class="btn btn-outline btn-block" style="margin-top:8px" onclick="closeCashRegister()">Отмена</button>
 </div></div><script>
-window.cashState={display:'0',left:null,operator:null,newInput:true,total:0,standalone:false};
+window.cashState={display:'0',left:null,operator:null,newInput:true,total:0,standalone:false,paymentMethod:'cash'};
 function cashRefresh(){
  if(window.cashState.standalone){
   const input=document.getElementById('cashManualTotal');
@@ -154,7 +159,12 @@ function cashRefresh(){
  const d=document.getElementById('cashDisplay'); if(d)d.textContent=window.cashState.display;
  const t=Number(window.cashState.total||0), entered=Number(window.cashState.display||0), ch=Math.max(0,entered-t);
  const te=document.getElementById('cashTotal'),ce=document.getElementById('cashChange');
- if(te)te.textContent=t.toFixed(2)+' руб.'; if(ce)ce.textContent=ch.toFixed(2)+' руб.';
+ if(te)te.textContent=t.toFixed(2)+' руб.';
+ if(ce)ce.textContent=(window.cashState.paymentMethod==='card'?'0.00':ch.toFixed(2))+' руб.';
+ const cc=document.getElementById('cashMethodCash'),cd=document.getElementById('cashMethodCard'),hint=document.getElementById('cashPaymentHint');
+ if(cc)cc.className=window.cashState.paymentMethod==='cash'?'btn btn-green':'btn btn-outline';
+ if(cd)cd.className=window.cashState.paymentMethod==='card'?'btn btn-green':'btn btn-outline';
+ if(hint)hint.textContent=window.cashState.paymentMethod==='card'?'Способ оплаты: карта. Нажмите «ОПЛАТИТЬ» после подтверждения оплаты.':'Способ оплаты: наличные. Введите сумму, полученную от клиента.';
 }
 function cashDigit(x){
  let s=window.cashState.display;
@@ -165,7 +175,7 @@ function cashDigit(x){
  window.cashState.display=s;cashRefresh();
 }
 function cashBackspace(){let s=window.cashState.display; s=s.length>1?s.slice(0,-1):'0';window.cashState.display=s;window.cashState.newInput=false;cashRefresh()}
-function cashClear(){window.cashState={display:'0',left:null,operator:null,newInput:true,total:window.cashState.total};cashRefresh()}
+function cashClear(){window.cashState={display:'0',left:null,operator:null,newInput:true,total:window.cashState.total,standalone:window.cashState.standalone,paymentMethod:window.cashState.paymentMethod||'cash'};cashRefresh()}
 function cashOperator(op){
  const v=Number(window.cashState.display||0);
  if(window.cashState.left===null){window.cashState.left=v}
@@ -182,12 +192,15 @@ function cashManualTotalChanged(){
  cashRefresh();
 }
 function cashSetExact(){window.cashState.display=Number(window.cashState.total||0).toFixed(2);window.cashState.newInput=true;cashRefresh()}
+function setPaymentMethod(method){window.cashState.paymentMethod=method==='card'?'card':'cash';if(window.cashState.paymentMethod==='card')window.cashState.display='0';cashRefresh()}
+function cashHandleEnter(){if(window.cashState.paymentMethod==='card'){payCash()}else{payCash()}}
+
 function cashItemsHtml(){
  const a=window.pendingSales||[], total=a.reduce((s,x)=>s+Number(x.price||0),0);
  return a.length?'<div class="feature-stat">'+a.map((x,i)=>(i+1)+'. '+x.from+' → '+x.to+' — '+Number(x.price||0).toFixed(2)+' руб.').join('<br>')+'</div>':'<div class="feature-stat">Билет будет добавлен в кассу.</div>';
 }
 function openStandaloneCalculator(){
- window.cashState={display:'0',left:null,operator:null,newInput:true,total:0,standalone:true};
+ window.cashState={display:'0',left:null,operator:null,newInput:true,total:0,standalone:true,paymentMethod:'cash'};
  document.getElementById('cashItems').innerHTML='<div class="feature-stat">💵 Касса открыта. Укажите сумму покупки, затем введите полученную от клиента сумму.</div>';
  document.getElementById('cashManualTotalBox').style.display='block';
  document.getElementById('cashManualTotal').value='';
@@ -201,7 +214,7 @@ function openStandaloneCalculator(){
 function openCashRegister(){
  if(!state.shiftActive){alert('Ошибка: Смена закрыта! Откройте смену.');return}
  if(!(window.pendingSales||[]).length){alert('Сначала добавьте билет кнопкой «➕ Добавить билет».');return}
- window.cashState.total=window.pendingSales.reduce((s,x)=>s+Number(x.price||0),0);window.cashState.display='0';window.cashState.standalone=false;window.cashState.left=null;window.cashState.operator=null;window.cashState.newInput=true;
+ window.cashState.total=window.pendingSales.reduce((s,x)=>s+Number(x.price||0),0);window.cashState.display='0';window.cashState.standalone=false;window.cashState.left=null;window.cashState.operator=null;window.cashState.newInput=true;window.cashState.paymentMethod='cash';
  document.getElementById('cashItems').innerHTML=cashItemsHtml();document.getElementById('cashModal').style.display='flex';cashRefresh();
 }
 function openCashRegisterForCurrentTicket(){
@@ -212,8 +225,17 @@ function openCashRegisterForCurrentTicket(){
 function closeCashRegister(){document.getElementById('cashManualTotalBox').style.display='none';const m=document.getElementById('cashModal');if(m)m.style.display='none';window.cashState.standalone=false;document.querySelector('#cashModal .btn-green').style.display='';document.querySelector('#cashModal .btn-outline[onclick="cashSetExact()"]').style.display=''}
 function payCash(){
  const total=Number(window.cashState.total||0),received=Number(window.cashState.display||0);
+ if(window.cashState.paymentMethod==='card'){
+   if(!(window.pendingSales||[]).length){closeCashRegister();return}
+   const itemsCount=window.pendingSales.length;
+   closeCashRegister();sellPendingSales();
+   alert('Оплата картой принята. Билетов: '+itemsCount+'. Сумма: '+total.toFixed(2)+' руб.');
+   return;
+ }
  if(received<total){alert('Внесено недостаточно денег.');return}
  if(!(window.pendingSales||[]).length){closeCashRegister();return}
- closeCashRegister();sellPendingSales();alert('Оплата принята. Сдача: '+(received-total).toFixed(2)+' руб.');
+ closeCashRegister();sellPendingSales();alert('Оплата наличными принята. Сдача: '+(received-total).toFixed(2)+' руб.');
 }
+document.addEventListener('keydown',function(e){const m=document.getElementById('cashModal');if(!m||m.style.display==='none')return;if(e.key==='Enter'){e.preventDefault();payCash()}});
+
 </script></body></html>
