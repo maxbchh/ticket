@@ -232,12 +232,13 @@ function cardPaymentError(){
   {type:'cancel',text:'⚠️ КАРТА АННУЛИРОВАНА\nСрок действия карты истёк.\nБилет(ы) не оформлены.'},
   {type:'retry',text:'❌ ОПЛАТА ОТКЛОНЕНА\nПревышен лимит операции.\nПопробуйте оплатить повторно.'}
  ];
- const roll=Math.random();
- // Ошибка примерно в 1 из 9 оплат. Среди ошибок чаще встречается обычная ошибка с повторной оплатой.
- if(roll>=1/9)return null;
+ // Терминал сам решает, когда сымитировать ошибку: иногда несколько оплат проходят подряд,
+ // а иногда ошибка появляется на следующей попытке. Вероятность плавающая, без фиксированного "каждого N-го раза".
+ const chance=0.05+Math.random()*0.22;
+ if(Math.random()>=chance)return null;
  const retryErrors=errors.filter(x=>x.type==='retry'),cancelErrors=errors.filter(x=>x.type==='cancel');
- // Истёкшая карта встречается реже, остальные ошибки — чаще.
- if(Math.random()<0.18)return cancelErrors[Math.floor(Math.random()*cancelErrors.length)];
+ // Аннулирование карты встречается заметно реже обычных ошибок.
+ if(Math.random()<0.12)return cancelErrors[Math.floor(Math.random()*cancelErrors.length)];
  return retryErrors[Math.floor(Math.random()*retryErrors.length)];
 }
 function cancelPendingCardPayment(reason){
