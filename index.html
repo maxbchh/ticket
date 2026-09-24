@@ -21,7 +21,7 @@
 .cash-info strong{display:block;font-size:1.15rem;margin-top:3px}
 </style><script src="cloud-sync.js"></script><script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}</script></head><body>
 <div class="top-status-bar"><div class="status-title"><span>📠 ТЕРМИНАЛ КОНДУКТОРА</span><span id="shiftBadge" class="badge badge-closed">СМЕНА ЗАКРЫТА</span></div><div class="status-info"><div>Транспорт: <strong id="currentTransportLabel">Узкоколейная ЖД</strong></div><div>Продано билетов: <strong id="totalShiftTickets">0</strong></div><div>Выручка: <strong id="totalShiftRevenue">0.00 руб.</strong></div><div><span id="liveClock">00:00:00</span></div></div></div>
-<div class="tabs-nav"><button class="tab-btn active" onclick="switchTab('terminal',this)">🎟️ Выпуск Билета</button><button class="tab-btn" onclick="switchTab('routes',this)">🗺️ Конструктор Маршрутов</button><button class="tab-btn" onclick="switchTab('shift',this)">📜 Журнал & Z-Отчёт</button><button class="tab-btn" onclick="switchTab('operations',this)">🎫 Билеты и Операции</button><button class="tab-btn" onclick="switchTab('settings',this)">⚙️ Настройки Терминала</button></div>
+<div class="tabs-nav"><button class="tab-btn" onclick="openStandaloneCalculator()">🧮 Калькулятор</button><button class="tab-btn active" onclick="switchTab('terminal',this)">🎟️ Выпуск Билета</button><button class="tab-btn" onclick="switchTab('routes',this)">🗺️ Конструктор Маршрутов</button><button class="tab-btn" onclick="switchTab('shift',this)">📜 Журнал & Z-Отчёт</button><button class="tab-btn" onclick="switchTab('operations',this)">🎫 Билеты и Операции</button><button class="tab-btn" onclick="switchTab('settings',this)">⚙️ Настройки Терминала</button></div>
 <div class="main-layout"><div class="left-column">
 <div id="tab-terminal" class="tab-content active"><div class="card"><div class="card-title"><span>Параметры Поездки</span><button class="btn btn-outline" onclick="soundBeep(880,80)">🔊 Тон</button></div><div class="form-grid"><div class="form-group"><label>Вид Транспорта</label><select id="transportType" onchange="onTransportTypeChange()"><option value="uzd">Узкоколейная ЖД</option><option value="train">Железная Дорога</option><option value="bus">Автобус</option><option value="trolley">Троллейбус</option><option value="tram">Трамвай</option><option value="minibus">Маршрутное Такси</option></select></div><div class="form-group"><label>Выберите Маршрут</label><select id="routeSelect" onchange="onRouteSelect()"></select></div><div class="form-group"><label>Станция Отправления (От)</label><select id="stationFrom" onchange="recalculatePrice()"></select></div><div class="form-group"><label>Станция Назначения (До)</label><select id="stationTo" onchange="recalculatePrice()"></select></div><div class="form-group"><label>Категория Пассажира</label><select id="passengerType" onchange="recalculatePrice()"><option value="full">Полный (100%)</option><option value="child">Детский / Школьный (50%)</option><option value="lgt">Льготный (0%)</option><option value="luggage">Багаж / Животные</option></select></div><div class="form-group"><label>Стоимость (руб.)</label><input type="number" step="0.01" id="ticketPrice" value="0.00" oninput="updatePreview()"></div><div class="form-group"><label>№ Поезда / Рейса</label><input type="text" id="trainNumInput" value="№601 УЗД" oninput="updatePreview()"></div><div class="form-group"><label>Вагон / Место</label><input type="text" id="seatInput" placeholder="Вагон 02, Место 14" oninput="updatePreview()"></div></div><div class="form-group full-width"><label>Дополнительное Примечание в Билете</label><input type="text" id="ticketNoteInput" placeholder="Например: Внеграфиковый поезд" oninput="updatePreview()"></div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px"><button class="btn btn-outline" type="button" onclick="addPendingSale()">➕ Добавить билет</button></div><div id="pendingSalesBox" style="margin-top:10px"></div><button class="btn btn-green btn-block" onclick="openCashRegisterForCurrentTicket()">💵 Продать билет → Внести в кассу</button><button id="sellPendingButton" class="btn btn-cyan btn-block" style="display:none;margin-top:8px" onclick="openCashRegister()">💵 Открыть кассу — продать добавленные билеты</button></div></div>
 </div></div>
@@ -143,7 +143,7 @@ renderPendingSales();
   </div>
   <button class="btn btn-outline btn-block" style="margin-top:8px" onclick="closeCashRegister()">Отмена</button>
 </div></div><script>
-window.cashState={display:'0',left:null,operator:null,newInput:true,total:0};
+window.cashState={display:'0',left:null,operator:null,newInput:true,total:0,standalone:false};
 function cashRefresh(){
  const d=document.getElementById('cashDisplay'); if(d)d.textContent=window.cashState.display;
  const t=Number(window.cashState.total||0), entered=Number(window.cashState.display||0), ch=Math.max(0,entered-t);
@@ -175,10 +175,20 @@ function cashItemsHtml(){
  const a=window.pendingSales||[], total=a.reduce((s,x)=>s+Number(x.price||0),0);
  return a.length?'<div class="feature-stat">'+a.map((x,i)=>(i+1)+'. '+x.from+' → '+x.to+' — '+Number(x.price||0).toFixed(2)+' руб.').join('<br>')+'</div>':'<div class="feature-stat">Билет будет добавлен в кассу.</div>';
 }
+function openStandaloneCalculator(){
+ window.cashState={display:'0',left:null,operator:null,newInput:true,total:0,standalone:true};
+ document.getElementById('cashItems').innerHTML='<div class="feature-stat">🧮 Обычный калькулятор — касса и продажа билетов не используются.</div>';
+ document.getElementById('cashTotal').textContent='—';
+ document.getElementById('cashChange').textContent='—';
+ document.getElementById('cashModal').style.display='flex';
+ document.querySelector('#cashModal .btn-green').style.display='none';
+ document.querySelector('#cashModal .btn-outline[onclick="cashSetExact()"]').style.display='none';
+ cashRefresh();
+}
 function openCashRegister(){
  if(!state.shiftActive){alert('Ошибка: Смена закрыта! Откройте смену.');return}
  if(!(window.pendingSales||[]).length){alert('Сначала добавьте билет кнопкой «➕ Добавить билет».');return}
- window.cashState.total=window.pendingSales.reduce((s,x)=>s+Number(x.price||0),0);window.cashState.display='0';window.cashState.left=null;window.cashState.operator=null;window.cashState.newInput=true;
+ window.cashState.total=window.pendingSales.reduce((s,x)=>s+Number(x.price||0),0);window.cashState.display='0';window.cashState.standalone=false;window.cashState.left=null;window.cashState.operator=null;window.cashState.newInput=true;
  document.getElementById('cashItems').innerHTML=cashItemsHtml();document.getElementById('cashModal').style.display='flex';cashRefresh();
 }
 function openCashRegisterForCurrentTicket(){
@@ -186,7 +196,7 @@ function openCashRegisterForCurrentTicket(){
  const d=getCurrentSaleDraft();if(!d.routeId||!d.from||!d.to){alert('Заполните маршрут и станции.');return}
  pendingSales.push(d);renderPendingSales();openCashRegister();
 }
-function closeCashRegister(){const m=document.getElementById('cashModal');if(m)m.style.display='none'}
+function closeCashRegister(){const m=document.getElementById('cashModal');if(m)m.style.display='none';window.cashState.standalone=false;document.querySelector('#cashModal .btn-green').style.display='';document.querySelector('#cashModal .btn-outline[onclick="cashSetExact()"]').style.display=''}
 function payCash(){
  const total=Number(window.cashState.total||0),received=Number(window.cashState.display||0);
  if(received<total){alert('Внесено недостаточно денег.');return}
