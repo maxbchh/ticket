@@ -67,7 +67,7 @@ window.onload=()=>{document.getElementById('conductorName').value=state.conducto
   function showRefundDialog(t){document.getElementById('refundConfirmModal')?.remove();const m=document.createElement('div');m.id='refundConfirmModal';m.className='refund-modal';m.innerHTML='<div class="refund-dialog"><h3>↩️ Возврат подтверждён</h3><p>Билет №'+t.num+' аннулирован.<br>Сумма возврата: <strong>'+Number(t.refund||t.price||0).toFixed(2)+' руб.</strong></p><div class="ops-actions"><button class="btn btn-outline" onclick="document.getElementById(\'refundConfirmModal\').remove()">Закрыть</button></div></div>';document.body.appendChild(m)}
   window.cancelTicket=function(num){const t=state.tickets.find(x=>Number(x.num)===Number(num));if(!t||t.status==='cancelled')return;const reason=prompt('Причина аннулирования:','Ошибка оформления');if(reason===null)return;t.status='cancelled';t.cancelReason=reason;t.refund=Number(t.price||0);t.cancelledAt=new Date().toLocaleString('ru-RU');state.refunds.push({num:t.num,amount:t.refund,reason,time:t.cancelledAt});state.operations.push({time:t.cancelledAt,type:'Возврат',ticket:t.num,amount:-t.refund,conductor:state.conductorName||'Кондуктор',details:reason});persist();updateShiftStats();renderOperations();searchTickets();showRefundDialog(t)};
   window.downloadConductorBackup=function(){const a=document.createElement('a');a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(state,null,2));a.download='conductor_backup_'+Date.now()+'.json';a.click()};
-  const originalProcess=window.processTicketSale;window.processTicketSale=function(){if(!state.shiftActive){alert("Ошибка: Смена закрыта! Откройте смену.");return}const before=state.lastTicketNum;originalProcess();const t=state.tickets.find(x=>Number(x.num)===before);if(t){t.status='active';t.conductor=state.conductorName;t.train=document.getElementById('trainNumInput')?.value||'';t.composition=state.currentComposition||'';t.passenger=document.getElementById('passengerType')?.value||'full';t.note=document.getElementById('ticketNoteInput')?.value||'';t.issuedAt=new Date().toISOString();addOperation('Продажа',t.num,t.price,'Билет выпущен');persist();renderOperations();searchTickets()}};
+  const originalProcess=window.processTicketSale;window.processTicketSale=function(){if(!state.shiftActive){alert("Ошибка: Смена закрыта! Откройте смену.");return}const before=state.lastTicketNum;originalProcess();const t=state.tickets.find(x=>Number(x.num)===before);if(t){t.status='active';t.conductor=state.conductorName;t.train=document.getElementById('trainNumInput')?.value||'';t.composition=state.currentComposition||'';t.passenger=document.getElementById('passengerType')?.value||'full';t.note=document.getElementById('ticketNoteInput')?.value||'';t.issuedAt=new Date().toISOString();if(window.__currentPurchaseId)t.purchaseId=window.__currentPurchaseId;addOperation('Продажа',t.num,t.price,window.__currentPurchaseId?'Покупка '+window.__currentPurchaseId+' — билет выпущен':'Билет выпущен');persist();renderOperations();searchTickets()}};
   const originalOpen=window.openShift;window.openShift=function(){originalOpen();state.shiftStartedAt=new Date().toISOString();addOperation('Открытие смены','',0,'Смена открыта');persist();renderOperations()};
   const originalClose=window.closeShift;window.closeShift=function(){originalClose();addOperation('Закрытие смены','',0,'Z-отчёт');persist();renderOperations()};
   const oldUpdate=window.updateShiftStats;window.updateShiftStats=function(){oldUpdate();renderOperations()};
@@ -76,31 +76,63 @@ window.onload=()=>{document.getElementById('conductorName').value=state.conducto
 window.pendingSales=window.pendingSales||[];
 function getCurrentSaleDraft(){
   const routeId=document.getElementById('routeSelect')?.value;
-  const r=state.routes.find(x=>x.id===routeId);
+  const r=state.routes.find(x=>String(x.id)===String(routeId));
   const fs=document.getElementById('stationFrom'),ts=document.getElementById('stationTo');
-  return {routeId,route:r?.name||'',from:fs?.selectedOptions?.[0]?.text||'',to:ts?.selectedOptions?.[0]?.text||'',price:Number(document.getElementById('ticketPrice')?.value||0),train:document.getElementById('trainNumInput')?.value||'',seat:document.getElementById('seatInput')?.value||'',note:document.getElementById('ticketNoteInput')?.value||'',passenger:document.getElementById('passengerType')?.value||'full'};
+  return {
+    routeId,
+    route:r?.name||'',
+    from:fs?.selectedOptions?.[0]?.text||'',
+    to:ts?.selectedOptions?.[0]?.text||'',
+    price:Number(document.getElementById('ticketPrice')?.value||0),
+    train:document.getElementById('trainNumInput')?.value||'',
+    seat:document.getElementById('seatInput')?.value||'',
+    note:document.getElementById('ticketNoteInput')?.value||'',
+    passenger:document.getElementById('passengerType')?.value||'full'
+  };
 }
 function renderPendingSales(){
   const b=document.getElementById('pendingSalesBox'),btn=document.getElementById('sellPendingButton');if(!b)return;
   if(!pendingSales.length){b.innerHTML='';if(btn)btn.style.display='none';return}
   const total=pendingSales.reduce((s,x)=>s+Number(x.price||0),0);
-  b.innerHTML='<div class="feature-stat"><strong>Добавленные билеты:</strong><br>'+pendingSales.map((x,i)=>(i+1)+'. '+x.from+' → '+x.to+' — '+Number(x.price).toFixed(2)+' руб. <button class="btn btn-red mini-btn" onclick="pendingSales.splice('+i+',1);renderPendingSales()">✕</button>').join('<br>')+'<hr><strong>Итого: '+total.toFixed(2)+' руб.</strong></div>';
+  b.innerHTML='<div class="feature-stat"><strong>ТЕКУЩАЯ ПОКУПКА — '+pendingSales.length+' БИЛЕТ'+(pendingSales.length===1?'':'А')+'</strong><div style="margin-top:8px">'+pendingSales.map((x,i)=>(i+1)+'. <strong>'+x.from+' → '+x.to+'</strong> — '+Number(x.price||0).toFixed(2)+' руб. <button class="btn btn-red mini-btn" onclick="removePendingSale('+i+')">✕</button>').join('<br>')+'</div><hr><strong>ИТОГО К ОПЛАТЕ: '+total.toFixed(2)+' руб.</strong></div>';
   if(btn){btn.style.display='block';btn.textContent='💳 Оплатить покупку — '+pendingSales.length+' билетов — '+total.toFixed(2)+' руб.'}
 }
-function addCurrentToBasket(){if(!state.shiftActive){alert('Ошибка: Смена закрыта! Откройте смену.');return}const d=getCurrentSaleDraft();if(!d.routeId||!d.from||!d.to){alert('Заполните маршрут и станции.');return}pendingSales.push(d);renderPendingSales();soundBeep(1200,60);document.getElementById('stationFrom')?.focus()}
-function addPendingSale(){if(!state.shiftActive){alert('Ошибка: Смена закрыта! Откройте смену.');return}const d=getCurrentSaleDraft();if(!d.routeId||!d.from||!d.to){alert('Заполните маршрут и станции.');return}pendingSales.push(d);renderPendingSales();soundBeep(1200,60)}
+function removePendingSale(i){if(i>=0&&i<pendingSales.length){pendingSales.splice(i,1);renderPendingSales()}}
+function addCurrentToBasket(){
+  if(!state.shiftActive){alert('Ошибка: Смена закрыта! Откройте смену.');return}
+  const d=getCurrentSaleDraft();
+  if(!d.routeId||!d.from||!d.to){alert('Заполните маршрут и станции.');return}
+  pendingSales.push(d);
+  renderPendingSales();
+  soundBeep(1200,60);
+  alert('Билет добавлен в текущую покупку: '+d.from+' → '+d.to);
+}
+function addPendingSale(){return addCurrentToBasket()}
 function sellPendingSales(){
-  if(!pendingSales.length)return;
-  const items=pendingSales.slice();pendingSales=[];
+  if(!pendingSales.length){alert('В покупке нет билетов.');return}
+  const items=pendingSales.slice();
+  const purchaseId='PUR-'+Date.now()+'-'+Math.random().toString(36).slice(2,8).toUpperCase();
+  window.__currentPurchaseId=purchaseId;
   for(const d of items){
-    const oldRoute=document.getElementById('routeSelect').value,oldFrom=document.getElementById('stationFrom').value,oldTo=document.getElementById('stationTo').value;
-    document.getElementById('routeSelect').value=d.routeId;onRouteSelect();
-    const r=state.routes.find(x=>x.id===d.routeId),fi=r?.stops.indexOf(d.from),ti=r?.stops.indexOf(d.to);
-    if(fi>=0)document.getElementById('stationFrom').value=String(fi);if(ti>=0)document.getElementById('stationTo').value=String(ti);
-    document.getElementById('ticketPrice').value=Number(d.price).toFixed(2);
-    document.getElementById('trainNumInput').value=d.train;document.getElementById('seatInput').value=d.seat;document.getElementById('ticketNoteInput').value=d.note;
-    window.__skipPrintOnce=true;processTicketSale();
+    const routeEl=document.getElementById('routeSelect'),fromEl=document.getElementById('stationFrom'),toEl=document.getElementById('stationTo');
+    routeEl.value=String(d.routeId);
+    onRouteSelect();
+    const r=state.routes.find(x=>String(x.id)===String(d.routeId));
+    const fi=r?.stops?.findIndex(x=>String(x)===String(d.from));
+    const ti=r?.stops?.findIndex(x=>String(x)===String(d.to));
+    if(fi>=0)fromEl.value=String(fi);
+    if(ti>=0)toEl.value=String(ti);
+    document.getElementById('ticketPrice').value=Number(d.price||0).toFixed(2);
+    document.getElementById('trainNumInput').value=d.train||'';
+    document.getElementById('seatInput').value=d.seat||'';
+    document.getElementById('ticketNoteInput').value=d.note||'';
+    document.getElementById('passengerType').value=d.passenger||'full';
+    updatePreview();
+    window.__skipPrintOnce=true;
+    processTicketSale();
   }
+  pendingSales=[];
+  window.__currentPurchaseId='';
   renderPendingSales();
 }
 function printTicket(){window.print()}
@@ -266,13 +298,16 @@ function payCash(){
      return;
    }
    const itemsCount=window.pendingSales.length;
-   closeCashRegister();sellPendingSales();
+   window.__lastPaidItemsCount=itemsCount;
+   sellPendingSales();
+   closeCashRegister();
    alert('✅ Оплата картой принята. Билетов: '+itemsCount+'. Сумма: '+total.toFixed(2)+' руб.');
    return;
  }
  if(received<total){alert('Внесено недостаточно денег.');return}
  if(!(window.pendingSales||[]).length){closeCashRegister();return}
- closeCashRegister();sellPendingSales();alert('Оплата наличными принята. Сдача: '+(received-total).toFixed(2)+' руб.');
+ window.__lastPaidItemsCount=window.pendingSales.length;
+ const change=(received-total);sellPendingSales();closeCashRegister();alert('Оплата наличными принята.\nБилетов: '+(window.__lastPaidItemsCount||0)+'\nСумма: '+total.toFixed(2)+' руб.\nСдача: '+change.toFixed(2)+' руб.');
 }
 document.addEventListener('keydown',function(e){const m=document.getElementById('cashModal');if(!m||m.style.display==='none')return;if(e.key==='Enter'){e.preventDefault();payCash()}});
 
