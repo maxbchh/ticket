@@ -154,7 +154,7 @@ function cashDigit(x){
  let s=window.cashState.display;
  if(x==='.'&&s.includes('.'))return;
  if(window.cashState.newInput){s=x==='.'?'0.':x;window.cashState.newInput=false}
- else{s=(s==='0'&&x!==' .')?s+x:s+x}
+ else{s=(s==='0'&&x!=='0'&&x!=='.')?x:s+x}
  if(s.length>12)return;
  window.cashState.display=s;cashRefresh();
 }
