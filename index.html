@@ -399,4 +399,201 @@ function refundBatch(){
     },50);
   };
   window.addEventListener('beforeunload',saveStop);
-})();</script></body></html>
+})();</script><script>
+(function(){
+  const TRIP_ID_KEY='conductor_current_trip_id';
+  const TRIP_ROUTE_KEY='conductor_current_trip_route';
+  const STOP_KEY='conductor_trip_stop_state';
+
+  function selectedRoute(){
+    const id=document.getElementById('routeSelect')?.value;
+    return state.routes.find(x=>x.id===id)||null;
+  }
+  function ensureTripForRoute(r,newTrip=false){
+    if(!r)return null;
+    const savedRoute=localStorage.getItem(TRIP_ROUTE_KEY);
+    let id=localStorage.getItem(TRIP_ID_KEY);
+    if(newTrip || !id || savedRoute!==r.id){
+      id='trip_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+      localStorage.setItem(TRIP_ID_KEY,id);
+      localStorage.setItem(TRIP_ROUTE_KEY,r.id);
+    }
+    state.currentTripId=id;
+    return id;
+  }
+  function stopIndex(){
+    const r=selectedRoute();
+    if(!r||!r.stops?.length)return -1;
+    const saved=state.tripStop;
+    if(saved&&saved.routeId===r.id&&Number.isInteger(Number(saved.index)))
+      return Math.max(0,Math.min(Number(saved.index),r.stops.length-1));
+    return Number(document.getElementById('stationFrom')?.value)||0;
+  }
+  function saveTripStop(r,i){
+    state.tripStop={routeId:r.id,index:i};
+    localStorage.setItem(STOP_KEY,JSON.stringify(state.tripStop));
+    if(state.currentTripId)localStorage.setItem(TRIP_ID_KEY,state.currentTripId);
+    localStorage.setItem(TRIP_ROUTE_KEY,r.id);
+  }
+  function setStationFrom(r,i){
+    const f=document.getElementById('stationFrom');
+    if(!f)return;
+    f.value=String(i);
+    recalculatePrice();
+    updatePreview();
+  }
+  function passengersAtCurrentStop(){
+    const r=selectedRoute(),i=stopIndex();
+    if(!r||i<0)return 0;
+    return state.tickets.filter(t=>{
+      if(t.status==='cancelled')return false;
+      if(t.tripId!==state.currentTripId)return false;
+      if(t.routeId!==r.id)return false;
+      return Number(t.toIndex)===i;
+    }).length;
+  }
+  function renderStops(){
+    let box=document.getElementById('stopControlPanel');
+    if(!box){
+      const host=document.getElementById('pendingSalesBox');
+      if(!host)return;
+      box=document.createElement('div');
+      box.id='stopControlPanel';
+      host.parentNode.insertBefore(box,host);
+    }
+    const r=selectedRoute();
+    if(!r||!r.stops?.length){box.innerHTML='';return}
+    const i=stopIndex(),name=r.stops[i]||'';
+    const count=passengersAtCurrentStop();
+    box.innerHTML='<div class="stop-control-row"><span>🚏 Текущая остановка: <span class="stop-current">'+name+'</span></span><button class="btn btn-cyan" type="button" '+(i>=r.stops.length-1?'disabled':'')+' onclick="nextStop()">➡️ Следующая остановка</button></div><div class="stop-exits">На этой остановке выходит: <strong>'+count+'</strong> пассажир'+(count===1?'':'ов')+'.</div>';
+  }
+
+  window.onRouteSelect=function(){
+    const r=selectedRoute();
+    const f=document.getElementById('stationFrom'),t=document.getElementById('stationTo');
+    if(!r){
+      if(f)f.innerHTML='';
+      if(t)t.innerHTML='';
+      renderStops();
+      return;
+    }
+    const oldRoute=localStorage.getItem(TRIP_ROUTE_KEY);
+    const sameTrip=oldRoute===r.id && localStorage.getItem(TRIP_ID_KEY);
+    ensureTripForRoute(r,!sameTrip);
+    const saved=JSON.parse(localStorage.getItem(STOP_KEY)||'null');
+    f.innerHTML='';t.innerHTML='';
+    r.stops.forEach((name,i)=>{
+      f.appendChild(new Option(name,String(i)));
+      t.appendChild(new Option(name,String(i)));
+    });
+    let from=sameTrip&&saved&&saved.routeId===r.id?Number(saved.index):0;
+    if(!Number.isInteger(from)||from<0||from>=r.stops.length)from=0;
+    f.value=String(from);
+    const oldTo=Number(t.value);
+    if(oldTo<=from && r.stops.length>from+1)t.value=String(from+1);
+    else if(t.value==='')t.value=String(Math.min(r.stops.length-1,from+1));
+    saveTripStop(r,from);
+    recalculatePrice();
+    updatePreview();
+    renderStops();
+  };
+
+  window.nextStop=function(){
+    const r=selectedRoute();
+    if(!r||!r.stops?.length)return;
+    ensureTripForRoute(r,false);
+    const i=stopIndex();
+    if(i<0||i>=r.stops.length-1)return;
+    const next=i+1;
+    saveTripStop(r,next);
+    setStationFrom(r,next);
+    renderStops();
+  };
+
+  document.addEventListener('change',function(e){
+    if(e.target?.id==='stationFrom'){
+      const r=selectedRoute(),i=Number(e.target.value);
+      if(r&&Number.isInteger(i)&&i>=0&&i<r.stops.length){
+        ensureTripForRoute(r,false);
+        saveTripStop(r,i);
+        renderStops();
+      }
+    }
+  });
+
+  window.processTicketSale=function(){
+    if(!state.shiftActive){
+      alert("Ошибка: Смена закрыта! Откройте смену.");
+      return;
+    }
+    const r=selectedRoute();
+    const fromEl=document.getElementById('stationFrom');
+    const toEl=document.getElementById('stationTo');
+    if(!r||!fromEl||!toEl||fromEl.value===''||toEl.value===''){
+      alert('Выберите маршрут, станцию отправления и станцию назначения.');
+      return;
+    }
+    const fromIndex=Number(fromEl.value),toIndex=Number(toEl.value);
+    if(!Number.isInteger(fromIndex)||!Number.isInteger(toIndex)||fromIndex===toIndex){
+      alert('Станция назначения должна отличаться от станции отправления.');
+      return;
+    }
+    const price=Math.max(0,Number(document.getElementById('ticketPrice')?.value||0));
+    ensureTripForRoute(r,false);
+    const t={
+      num:state.lastTicketNum,
+      time:new Date().toLocaleTimeString('ru-RU'),
+      route:r.name,
+      routeId:r.id,
+      tripId:state.currentTripId,
+      from:fromEl.selectedOptions?.[0]?.text||'',
+      to:toEl.selectedOptions?.[0]?.text||'',
+      fromIndex,
+      toIndex,
+      price,
+      status:'active',
+      conductor:state.conductorName,
+      passenger:document.getElementById('passengerType')?.value||'full',
+      note:document.getElementById('ticketNoteInput')?.value||'',
+      issuedAt:new Date().toISOString(),
+      shiftId:state.currentShiftId||null
+    };
+    state.tickets.push(t);
+    state.lastTicketNum++;
+    localStorage.setItem('conductor_tickets',JSON.stringify(state.tickets));
+    localStorage.setItem('conductor_last_num',String(state.lastTicketNum));
+    persist();
+    updateShiftStats();
+    updatePreview();
+    if(window.renderOperations)renderOperations();
+    if(window.searchTickets)searchTickets();
+    renderStops();
+    const cash=document.getElementById('cashRegisterModal');
+    if(cash?.classList.contains('open'))closeCashRegister();
+  };
+
+  window.confirmCashPayment=function(){
+    const price=Math.max(0,Number(document.getElementById('ticketPrice')?.value||0));
+    const received=Math.max(0,Number(document.getElementById('cashReceivedInput')?.value||0));
+    if(!state.shiftActive){alert("Сначала откройте смену во вкладке «Журнал & Z-Отчёт».");return}
+    if(window.__cashPaymentMethod==='cash'&&received<price){alert('Недостаточно денег для оплаты билета.');return}
+    const before=state.lastTicketNum;
+    window.processTicketSale();
+    if(state.lastTicketNum!==before)closeCashRegister();
+  };
+
+  const oldTransport=window.onTransportTypeChange;
+  window.onTransportTypeChange=function(){
+    const s=document.getElementById('transportType'),l=document.getElementById('currentTransportLabel');
+    if(s&&l)l.innerText=s.options[s.selectedIndex].text;
+    if(window.updateRouteDropdowns)window.updateRouteDropdowns();
+  };
+
+  window.addEventListener('load',function(){
+    state.currentTripId=localStorage.getItem(TRIP_ID_KEY)||state.currentTripId||null;
+    const r=selectedRoute();
+    if(r)window.onRouteSelect();
+    else renderStops();
+  });
+})();
+</script></body></html>
