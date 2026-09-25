@@ -227,4 +227,111 @@ function refundBatch(){
 })();
 </script>
 
-<script>window.addCurrentToBasket=window.addCurrentToBasket||function(){processTicketSale()};</script></body></html>
+<script>window.addCurrentToBasket=window.addCurrentToBasket||function(){processTicketSale()};</script><style>
+#stopControlPanel{margin-top:10px;padding:12px;border:1px solid var(--border-color);border-radius:14px;background:var(--bg-input)}
+.stop-control-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.stop-current{font-weight:800;color:var(--accent-cyan)}
+.stop-exits{margin-top:8px;font-size:.9rem;color:var(--text-secondary)}
+.cash-suggestions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.cash-suggestion{padding:8px 12px;border:1px solid rgba(180,190,205,.4);border-radius:10px;background:#fff;cursor:pointer;font-weight:700}
+</style>
+<script>
+(function(){
+  const STOP_KEY='conductor_trip_stop_state';
+  function route(){return state.routes.find(r=>r.id===document.getElementById('routeSelect')?.value)}
+  function saveStop(){localStorage.setItem(STOP_KEY,JSON.stringify(state.tripStop||{}))}
+  function currentIndex(){
+    const r=route(); if(!r||!Array.isArray(r.stops)||!r.stops.length)return -1;
+    if(!state.tripStop||state.tripStop.routeId!==r.id) return 0;
+    return Math.min(Math.max(Number(state.tripStop.index||0),0),r.stops.length-1);
+  }
+  function setFromIndex(i){
+    const r=route(); if(!r)return;
+    const f=document.getElementById('stationFrom');
+    if(!f)return;
+    f.selectedIndex=Math.max(0,Math.min(i,f.options.length-1));
+    recalculatePrice(); updatePreview();
+  }
+  function exitsAt(stop){
+    const r=route(); if(!r)return [];
+    return state.tickets.filter(t=>t.status!=='cancelled' && t.route===r.name && t.to===stop);
+  }
+  function renderStopPanel(){
+    let box=document.getElementById('stopControlPanel');
+    if(!box){
+      const host=document.getElementById('pendingSalesBox');
+      if(!host)return;
+      box=document.createElement('div'); box.id='stopControlPanel'; host.parentNode.insertBefore(box,host);
+    }
+    const r=route();
+    if(!r||!r.stops?.length){box.innerHTML='';return}
+    const i=currentIndex();
+    const stop=r.stops[i]||'';
+    const exits=exitsAt(stop).length;
+    const nextDisabled=i>=r.stops.length-1;
+    box.innerHTML='<div class="stop-control-row"><span>🚏 Текущая остановка: <span class="stop-current">'+stop+'</span></span><button class="btn btn-cyan" type="button" '+(nextDisabled?'disabled':'')+' onclick="nextStop()">➡️ Следующая остановка</button></div><div class="stop-exits">На этой остановке выходит: <strong>'+exits+'</strong> пассажир'+(exits===1?'':'ов')+'.</div>';
+  }
+  window.nextStop=function(){
+    const r=route(); if(!r||!r.stops?.length)return;
+    const i=currentIndex();
+    if(i>=r.stops.length-1){alert('Это последняя остановка маршрута.');return}
+    const next=i+1;
+    const stop=r.stops[next];
+    state.tripStop={routeId:r.id,index:next};
+    saveStop();
+    setFromIndex(next);
+    renderStopPanel();
+    soundBeep(1200,100);
+    alert('Следующая остановка: '+stop+'\nВыходит: '+exitsAt(stop).length+' пассажиров.');
+  };
+  const oldRoute=window.onRouteSelect;
+  window.onRouteSelect=function(){
+    if(oldRoute)oldRoute();
+    const r=route();
+    state.tripStop={routeId:r?.id||'',index:0}; saveStop();
+    setFromIndex(0); renderStopPanel();
+  };
+  const oldTransport=window.onTransportTypeChange;
+  window.onTransportTypeChange=function(){
+    if(oldTransport)oldTransport();
+    const r=route();
+    if(r){state.tripStop={routeId:r.id,index:0};saveStop();setTimeout(()=>{setFromIndex(0);renderStopPanel()},0)}
+  };
+  const oldProcess=window.processTicketSale;
+  window.processTicketSale=function(){
+    const before=state.lastTicketNum;
+    oldProcess();
+    if(state.lastTicketNum!==before) renderStopPanel();
+  };
+  const oldOpen=window.openCashRegister;
+  window.openCashRegister=function(){
+    oldOpen();
+    setTimeout(()=>{
+      const input=document.getElementById('cashReceivedInput');
+      if(input){input.focus();input.select()}
+      let box=document.getElementById('cashSuggestions');
+      if(!box){
+        const host=input?.parentElement;
+        if(host){
+          box=document.createElement('div'); box.id='cashSuggestions'; box.className='cash-suggestions';
+          host.appendChild(box);
+        }
+      }
+      if(box)box.innerHTML=[1,5,10,20,50,100,200].map(v=>'<button type="button" class="cash-suggestion" onclick="setCashReceived('+v+')">'+v+' ₽</button>').join('');
+    },80);
+  };
+  window.setCashReceived=function(v){
+    const input=document.getElementById('cashReceivedInput');
+    if(input){input.value=Number(v).toFixed(2);input.focus();input.select()}
+    updateCashRegister();
+  };
+  const oldOnLoad=window.onload;
+  window.onload=function(){
+    if(oldOnLoad)oldOnLoad();
+    const saved=JSON.parse(localStorage.getItem(STOP_KEY)||'null');
+    if(saved&&saved.routeId)state.tripStop=saved;
+    setTimeout(()=>renderStopPanel(),50);
+  };
+  window.addEventListener('beforeunload',saveStop);
+})();
+</script></body></html>
