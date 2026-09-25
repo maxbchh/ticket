@@ -235,11 +235,6 @@ function refundBatch(){
 .cash-suggestions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .cash-suggestion{padding:8px 12px;border:1px solid rgba(180,190,205,.4);border-radius:10px;background:#fff;cursor:pointer;font-weight:700}
 </style>
-<style>
-#stopInfoToast{position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-12px);opacity:0;pointer-events:none;z-index:11000;background:rgba(255,255,255,.96);border:1px solid rgba(255,255,255,.95);box-shadow:0 12px 40px rgba(20,40,80,.2);backdrop-filter:blur(18px);border-radius:14px;padding:12px 18px;color:var(--text-primary);font-weight:700;transition:opacity .2s,transform .2s;}
-#stopInfoToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-</style>
-<div id="stopInfoToast" aria-live="polite"></div>
 <script>
 (function(){
   const STOP_KEY='conductor_trip_stop_state';
@@ -286,14 +281,6 @@ function refundBatch(){
     saveStop();
     setFromIndex(next);
     renderStopPanel();
-    const exits=exitsAt(stop).length;
-    const toast=document.getElementById('stopInfoToast');
-    if(toast){
-      toast.textContent='Следующая остановка: '+stop+' — выходит: '+exits+' пассажиров';
-      toast.classList.add('show');
-      clearTimeout(window.__stopToastTimer);
-      window.__stopToastTimer=setTimeout(()=>toast.classList.remove('show'),3500);
-    }
   };
   const oldRoute=window.onRouteSelect;
   window.onRouteSelect=function(){
