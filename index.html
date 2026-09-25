@@ -275,9 +275,16 @@ function refundBatch(){
   }
   function exitsAt(stop){
     const r=route(); if(!r)return [];
+    const idx=currentIndex();
     const norm=v=>String(v??'').replace(/\\s+/g,' ').trim().toLocaleLowerCase('ru-RU');
     const wanted=norm(stop);
-    return state.tickets.filter(t=>t.status!=='cancelled' && t.tripId===state.currentTripId && (t.routeId===r.id || (!t.routeId && t.route===r.name)) && norm(t.to)===wanted);
+    return state.tickets.filter(t=>{
+      if(t.status==='cancelled')return false;
+      if(t.tripId!==state.currentTripId)return false;
+      if(t.routeId && t.routeId!==r.id)return false;
+      if(Number.isInteger(t.toIndex))return t.toIndex===idx;
+      return norm(t.to)===wanted;
+    });
   }
   function renderStopPanel(){
     let box=document.getElementById('stopControlPanel');
@@ -343,9 +350,22 @@ function refundBatch(){
   }
   const oldProcess=window.processTicketSale;
   window.processTicketSale=function(){
+    const r=route();
+    if(r)ensureTrip(r);
     const before=state.lastTicketNum;
     oldProcess();
-    if(state.lastTicketNum!==before) renderStopPanel();
+    if(state.lastTicketNum!==before){
+      const t=state.tickets.find(x=>Number(x.num)===before);
+      if(t){
+        const toEl=document.getElementById('stationTo');
+        t.tripId=state.currentTripId||null;
+        t.routeId=r?r.id:null;
+        t.toIndex=toEl&&toEl.value!==''?Number(toEl.value):null;
+        t.fromIndex=document.getElementById('stationFrom')?.value!==''?Number(document.getElementById('stationFrom').value):null;
+        persist();
+      }
+      renderStopPanel();
+    }
   };
   const oldOpen=window.openCashRegister;
   window.openCashRegister=function(){
