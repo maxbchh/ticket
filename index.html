@@ -445,11 +445,27 @@ function refundBatch(){
   function passengersAtCurrentStop(){
     const r=selectedRoute(),i=stopIndex();
     if(!r||i<0)return 0;
+    const stopName=String(r.stops[i]||'').replace(/\\s+/g,' ').trim().toLocaleLowerCase('ru-RU');
     return state.tickets.filter(t=>{
       if(t.status==='cancelled')return false;
-      if(t.tripId!==state.currentTripId)return false;
-      if(t.routeId!==r.id)return false;
-      return Number(t.toIndex)===i;
+
+      // Новый формат: билет однозначно относится к текущему рейсу.
+      if(t.tripId===state.currentTripId){
+        if(t.routeId && t.routeId!==r.id)return false;
+        if(Number.isInteger(Number(t.toIndex))) return Number(t.toIndex)===i;
+        return String(t.to||'').replace(/\\s+/g,' ').trim().toLocaleLowerCase('ru-RU')===stopName;
+      }
+
+      // Старые билеты, созданные до исправления рейсов: используем маршрут + индекс/название.
+      // Это позволяет уже выпущенным билетам тоже отображаться на остановке.
+      if(!t.tripId){
+        if(t.routeId && t.routeId!==r.id)return false;
+        if(!t.routeId && t.route!==r.name)return false;
+        if(Number.isInteger(Number(t.toIndex))) return Number(t.toIndex)===i;
+        return String(t.to||'').replace(/\\s+/g,' ').trim().toLocaleLowerCase('ru-RU')===stopName;
+      }
+
+      return false;
     }).length;
   }
   function renderStops(){
