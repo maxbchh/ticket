@@ -399,7 +399,7 @@ function refundBatch(){
         const host=input?.parentElement;
         if(host){box=document.createElement('div');box.id='cashSuggestions';box.className='cash-suggestions';host.appendChild(box)}
       }
-      if(box)box.innerHTML=[1,2,3,4,5,10,15,20].map(v=>'<button type="button" class="cash-suggestion" onclick="setCashReceived('+v+')">'+v+' BYN</button>').join('');
+      if(box)box.innerHTML=[1,2,3,4,5,10,15,20,50].map(v=>'<button type="button" class="cash-suggestion" onclick="setCashReceived('+v+')">'+v+' BYN</button>').join('');
     },80);
   };
   window.setCashReceived=function(v){
