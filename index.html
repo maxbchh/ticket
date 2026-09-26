@@ -595,7 +595,16 @@ function refundBatch(){
     if(window.__cashPaymentMethod==='cash'&&received<price){alert('Недостаточно денег для оплаты билета.');return}
     const before=state.lastTicketNum;
     window.processTicketSale();
-    if(state.lastTicketNum!==before){ closeCashRegister(); const m=document.getElementById("cashRegisterModal"); if(m){m.classList.remove("open");m.style.display="none";m.setAttribute("aria-hidden","true");} }
+    if(state.lastTicketNum!==before){
+      // Успешная оплата и выпуск билета — автоматически закрываем окно кассы.
+      const m=document.getElementById("cashRegisterModal");
+      if(m){
+        m.classList.remove("open");
+        m.style.display="none";
+        m.setAttribute("aria-hidden","true");
+      }
+      window.__cashPaymentMethod=null;
+    }
   };
 
   const oldTransport=window.onTransportTypeChange;
