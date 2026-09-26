@@ -176,6 +176,7 @@ function refundBatch(){
     modal.classList.remove('open');
     modal.hidden = true;
     modal.setAttribute('aria-hidden','true');
+    modal.style.setProperty('display','none','important');
   };
 
   window.setCashExact = function(){
@@ -209,18 +210,16 @@ function refundBatch(){
       return;
     }
 
-    const before = state.lastTicketNum;
+    const before = Number(state.lastTicketNum);
+    const countBefore = state.tickets.length;
+
     window.processTicketSale();
 
-    const issued = state.tickets.some(t => Number(t.num) === Number(before));
+    const issued = state.tickets.length > countBefore ||
+      Number(state.lastTicketNum) !== before;
+
     if(issued){
-      const modal = document.getElementById('cashRegisterModal');
-      if(modal){
-        modal.classList.remove('open');
-        modal.hidden = true;
-        modal.setAttribute('aria-hidden','true');
-        modal.style.removeProperty('display');
-      }
+      window.closeCashRegister();
       window.__cashPaymentMethod = null;
     }
   };
