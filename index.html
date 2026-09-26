@@ -585,14 +585,24 @@ function refundBatch(){
     state.lastTicketNum++;
     localStorage.setItem('conductor_tickets',JSON.stringify(state.tickets));
     localStorage.setItem('conductor_last_num',String(state.lastTicketNum));
+
+    // Закрываем кассу СРАЗУ после фактического выпуска билета.
+    // Дальнейшая синхронизация/перерисовка интерфейса не должна
+    // иметь возможности помешать автоматическому закрытию.
+    const cash=document.getElementById('cashRegisterModal');
+    if(cash){
+      cash.classList.remove('open');
+      cash.hidden=true;
+      cash.setAttribute('aria-hidden','true');
+      cash.style.setProperty('display','none','important');
+    }
+
     persist();
     updateShiftStats();
     updatePreview();
     if(window.renderOperations)renderOperations();
     if(window.searchTickets)searchTickets();
     renderStops();
-    const cash=document.getElementById('cashRegisterModal');
-    if(cash?.classList.contains('open'))closeCashRegister();
   };
 
   
