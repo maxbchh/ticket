@@ -211,9 +211,24 @@ function refundBatch(){
     processTicketSale();
     const issued = state.tickets.some(t => Number(t.num) === Number(before));
     if(issued){
-      closeCashRegister();
+      // Закрываем кассу только после фактического выпуска билета.
+      const modal = document.getElementById('cashRegisterModal');
+      if(modal){
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden','true');
+        modal.style.setProperty('display','none','important');
+      }
+      // На случай если другой обработчик успеет снова открыть модальное окно.
+      setTimeout(function(){
+        const m = document.getElementById('cashRegisterModal');
+        if(m){
+          m.classList.remove('open');
+          m.setAttribute('aria-hidden','true');
+          m.style.setProperty('display','none','important');
+        }
+      }, 50);
       const change = window.__cashPaymentMethod === 'cash' ? Math.max(0, received - price).toFixed(2) : '0.00';
-      
+      window.__cashPaymentMethod = null;
     }
   };
 
