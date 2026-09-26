@@ -177,6 +177,9 @@ function refundBatch(){
     if(method) method.textContent = 'Наличные';
     modal.hidden = false;
     modal.classList.add('open');
+    // После первого закрытия closeCashRegister ставит inline display:none!important.
+    // Обязательно убираем этот старый стиль при каждом новом открытии.
+    modal.style.removeProperty('display');
     modal.setAttribute('aria-hidden','false');
     updateCashRegister();
   };
