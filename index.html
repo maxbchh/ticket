@@ -197,7 +197,7 @@ function refundBatch(){
   };
 
   window.confirmCashPayment = function(){
-    const price = cashPrice();
+    const price = Math.max(0, Number(document.getElementById('ticketPrice')?.value || 0));
     const received = Math.max(0, Number(document.getElementById('cashReceivedInput')?.value || 0));
 
     if(!state.shiftActive){
@@ -210,26 +210,17 @@ function refundBatch(){
     }
 
     const before = state.lastTicketNum;
-    processTicketSale();
+    window.processTicketSale();
+
     const issued = state.tickets.some(t => Number(t.num) === Number(before));
     if(issued){
-      // Закрываем кассу только после фактического выпуска билета.
       const modal = document.getElementById('cashRegisterModal');
       if(modal){
         modal.classList.remove('open');
+        modal.hidden = true;
         modal.setAttribute('aria-hidden','true');
-        modal.style.setProperty('display','none','important');
+        modal.style.removeProperty('display');
       }
-      // На случай если другой обработчик успеет снова открыть модальное окно.
-      setTimeout(function(){
-        const m = document.getElementById('cashRegisterModal');
-        if(m){
-          m.classList.remove('open');
-          m.setAttribute('aria-hidden','true');
-          m.style.setProperty('display','none','important');
-        }
-      }, 50);
-      const change = window.__cashPaymentMethod === 'cash' ? Math.max(0, received - price).toFixed(2) : '0.00';
       window.__cashPaymentMethod = null;
     }
   };
@@ -605,25 +596,7 @@ function refundBatch(){
     if(cash?.classList.contains('open'))closeCashRegister();
   };
 
-  window.confirmCashPayment=function(){
-    const price=Math.max(0,Number(document.getElementById('ticketPrice')?.value||0));
-    const received=Math.max(0,Number(document.getElementById('cashReceivedInput')?.value||0));
-    if(!state.shiftActive){alert("Сначала откройте смену во вкладке «Журнал & Z-Отчёт».");return}
-    if(window.__cashPaymentMethod==='cash'&&received<price){alert('Недостаточно денег для оплаты билета.');return}
-    const before=state.lastTicketNum;
-    window.processTicketSale();
-    if(state.lastTicketNum!==before){
-      // Успешная оплата и выпуск билета — автоматически закрываем окно кассы.
-      const m=document.getElementById("cashRegisterModal");
-      if(m){
-        m.classList.remove("open");
-        m.hidden = true;
-        m.setAttribute("aria-hidden","true");
-        m.style.removeProperty("display");
-      }
-      window.__cashPaymentMethod=null;
-    }
-  };
+  
 
   const oldTransport=window.onTransportTypeChange;
   window.onTransportTypeChange=function(){
