@@ -3,7 +3,7 @@
   const URL='https://ubhfigqpsepnpokrbdyo.supabase.co/rest/v1/ticket_shared_state';
   const KEY='sb_publishable_yN8W8pvQq8hWsYMO8z1Rzw_6zKQ-8D1';
   const ROW='main';
-  const LOCAL_KEYS=['conductor_deleted_route_ids','conductor_routes,'conductor_tickets','conductor_shift_active','conductor_name','conductor_terminal_id','conductor_org_name','conductor_ticket_footer','conductor_paper_width','conductor_last_num','conductor_operations','conductor_compositions','conductor_current_composition','conductor_shift_started_at'];
+  const LOCAL_KEYS=['conductor_deleted_route_ids','conductor_routes','conductor_tickets','conductor_shift_active','conductor_name','conductor_terminal_id','conductor_org_name','conductor_ticket_footer','conductor_paper_width','conductor_last_num','conductor_operations','conductor_compositions','conductor_current_composition','conductor_shift_started_at'];
   const headers={'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'};
   let timer=null,saving=false,queued=false,hydrating=false,watcherInstalled=false,originalSetItem=null,originalRemoveItem=null;
   function getLocal(k,d){const v=localStorage.getItem(k);if(v===null)return d;try{return JSON.parse(v)}catch(_){return v}}
