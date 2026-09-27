@@ -639,4 +639,24 @@ function refundBatch(){
 #cashRegisterModal[hidden]{display:none !important}
 #cashRegisterModal[aria-hidden="true"]{display:none !important}
 #cashRegisterModal[aria-hidden="false"]{display:flex !important}
-</style></body></html>
+</style><script>
+(function(){
+  document.addEventListener('click',function(e){
+    const btn=e.target&&e.target.closest&&e.target.closest('#routesTableBody button.btn-red');
+    if(!btn)return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const row=btn.closest('tr'), body=document.getElementById('routesTableBody');
+    if(!row||!body)return;
+    const index=Array.prototype.indexOf.call(body.children,row);
+    if(index<0||!state.routes[index])return;
+    const route=state.routes[index];
+    if(!confirm('Удалить маршрут «'+(route.name||'Без названия')+'»?'))return;
+    state.routes.splice(index,1);
+    localStorage.setItem('conductor_routes',JSON.stringify(state.routes));
+    try{if(typeof persist==='function')persist()}catch(_){}
+    renderRoutesTable();
+    updateRouteDropdowns();
+  },true);
+})();
+</script></body></html>
