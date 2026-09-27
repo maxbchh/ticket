@@ -653,6 +653,9 @@ function refundBatch(){
     const route=state.routes[index];
     if(!confirm('Удалить маршрут «'+(route.name||'Без названия')+'»?'))return;
     state.routes.splice(index,1);
+    const deleted=JSON.parse(localStorage.getItem('conductor_deleted_route_ids')||'[]');
+    if(route.id&&!deleted.includes(String(route.id)))deleted.push(String(route.id));
+    localStorage.setItem('conductor_deleted_route_ids',JSON.stringify(deleted));
     localStorage.setItem('conductor_routes',JSON.stringify(state.routes));
     try{if(typeof persist==='function')persist()}catch(_){}
     renderRoutesTable();
