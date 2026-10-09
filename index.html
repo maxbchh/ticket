@@ -413,60 +413,26 @@ function refundBatch(){
   }
   const oldProcess=window.processTicketSale;
   window.processTicketSale=function(){
-    if(!state.shiftActive){
-      alert("Ошибка: Смена закрыта! Откройте смену.");
-      return;
-    }
-    const r=selectedRoute();
-    const fromEl=document.getElementById('stationFrom');
-    const toEl=document.getElementById('stationTo');
-    if(!r||!fromEl||!toEl||fromEl.value===''||toEl.value===''){
-      alert('Выберите маршрут, станцию отправления и станцию назначения.');
-      return;
-    }
+    if(!state.shiftActive){alert("Ошибка: Смена закрыта! Откройте смену.");return;}
+    const r=selectedRoute(),fromEl=document.getElementById('stationFrom'),toEl=document.getElementById('stationTo');
+    if(!r||!fromEl||!toEl||fromEl.value===''||toEl.value===''){alert('Выберите маршрут, станцию отправления и станцию назначения.');return;}
     const fromIndex=Number(fromEl.value),toIndex=Number(toEl.value);
-    if(!Number.isInteger(fromIndex)||!Number.isInteger(toIndex)||fromIndex===toIndex){
-      alert('Станция назначения должна отличаться от станции отправления.');
-      return;
-    }
+    if(!Number.isInteger(fromIndex)||!Number.isInteger(toIndex)||fromIndex===toIndex){alert('Станция назначения должна отличаться от станции отправления.');return;}
     const price=Math.max(0,Number(document.getElementById('ticketPrice')?.value||0));
     const qty=Math.max(1,Math.min(500,Math.floor(Number(document.getElementById('ticketQuantity')?.value||1))));
     document.getElementById('ticketQuantity').value=String(qty);
     ensureTripForRoute(r,false);
-    const now=new Date();
+    const now=new Date(),issued=[];
     for(let i=0;i<qty;i++){
-      state.tickets.push({
-        num:state.lastTicketNum,
-        time:now.toLocaleTimeString('ru-RU'),
-        route:r.name,
-        routeId:r.id,
-        tripId:state.currentTripId,
-        from:fromEl.selectedOptions?.[0]?.text||'',
-        to:toEl.selectedOptions?.[0]?.text||'',
-        fromIndex,
-        toIndex,
-        price,
-        status:'active',
-        conductor:state.conductorName,
-        passenger:document.getElementById('passengerType')?.value||'full',
-        note:document.getElementById('ticketNoteInput')?.value||'',
-        issuedAt:now.toISOString(),
-        shiftId:state.currentShiftId||null
-      });
-      state.lastTicketNum++;
+      const t={num:state.lastTicketNum,time:now.toLocaleTimeString('ru-RU'),route:r.name,routeId:r.id,tripId:state.currentTripId,from:fromEl.selectedOptions?.[0]?.text||'',to:toEl.selectedOptions?.[0]?.text||'',fromIndex,toIndex,price,status:'active',conductor:state.conductorName,passenger:document.getElementById('passengerType')?.value||'full',note:document.getElementById('ticketNoteInput')?.value||'',issuedAt:now.toISOString(),shiftId:state.currentShiftId||null};
+      state.tickets.push(t);issued.push(t);state.lastTicketNum++;
+      if(window.addOperation)window.addOperation('Продажа',t.num,t.price,'Билет выпущен');
     }
     localStorage.setItem('conductor_tickets',JSON.stringify(state.tickets));
     localStorage.setItem('conductor_last_num',String(state.lastTicketNum));
     const cash=document.getElementById('cashRegisterModal');
-    if(cash){
-      cash.classList.remove('open');
-      cash.hidden=true;
-      cash.setAttribute('aria-hidden','true');
-      cash.style.setProperty('display','none','important');
-    }
-    persist();
-    updateShiftStats();
-    updatePreview();
+    if(cash){cash.classList.remove('open');cash.hidden=true;cash.setAttribute('aria-hidden','true');cash.style.setProperty('display','none','important');}
+    persist();updateShiftStats();updatePreview();
     if(window.renderOperations)renderOperations();
     if(window.searchTickets)searchTickets();
     renderStops();
