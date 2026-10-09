@@ -194,7 +194,7 @@ function refundBatch(){
 <div class="sales-design-line"><span>Стоимость одного билета</span><strong id="cashSaleUnit">0,00 BYN</strong></div>
 <div class="sales-design-line"><span>Количество билетов</span><strong id="cashSaleQty">1</strong></div>
 <div class="sales-design-divider"></div>
-<div class="sales-design-line sales-design-total"><span>Итого к оплате</span><strong id="cashSaleTotal">0,00 BYN</strong></div></div><div class="cash-register-grid">
+<div class="sales-design-line sales-design-total"><span>Итого к оплате</span><strong id="cashSaleTotal">0,00 BYN</strong></div><div class="sales-design-divider"></div><div class="sales-design-line"><span>Клиент дал</span><strong id="cashSaleReceived">0,00 BYN</strong></div><div class="sales-design-line sales-design-total"><span>Сдача</span><strong id="cashSaleChange">0,00 BYN</strong></div></div><div class="cash-register-grid">
       <div class="cash-register-box">
         <label>Общая стоимость билетов</label>
         <div class="cash-register-total" id="cashTicketTotal">0.00 BYN</div>
@@ -206,7 +206,7 @@ function refundBatch(){
     </div>
     <div class="cash-register-grid" style="margin-top:10px">
       <div class="cash-register-box"><span style="color:var(--text-secondary)">Способ оплаты</span><strong id="cashPaymentMethod">Наличные</strong></div>
-      <div class="cash-register-box"><span style="color:var(--text-secondary)">Сдача</span><strong id="cashChange">0.00 BYN</strong></div>
+      <div class="cash-register-box"><span style="color:var(--text-secondary)">Статус оплаты</span><strong id="cashPaymentStatus">Ожидает оплаты</strong></div>
     </div>
     <div class="cash-register-actions">
       <button class="btn btn-cyan" type="button" onclick="setCashExact()">Сумма билета</button>
@@ -230,7 +230,7 @@ function refundBatch(){
   function updateCashSaleSummary(){
     const get=id=>document.getElementById(id),fmt=n=>(Math.round((Number(n)||0)*100)/100).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' BYN';
     const from=get('stationFrom'),to=get('stationTo'),route=get('routeSelect'),cat=get('passengerType'),put=(id,v)=>{const e=get(id);if(e)e.textContent=v;};
-    put('cashSaleRoute',route?.selectedOptions?.[0]?.text||'—');put('cashSaleStations',(from?.selectedOptions?.[0]?.text||'—')+' → '+(to?.selectedOptions?.[0]?.text||'—'));put('cashSaleCategory',cat?.selectedOptions?.[0]?.text||'—');put('cashSaleUnit',fmt(get('ticketPrice')?.value||0));put('cashSaleQty',Math.max(1,Math.floor(Number(get('ticketQuantity')?.value||1))));put('cashSaleTotal',fmt(cashPrice()));
+    const total=cashPrice(),received=Math.max(0,Number(get('cashReceivedInput')?.value||0)),change=Math.max(0,received-total);put('cashSaleRoute',route?.selectedOptions?.[0]?.text||'—');put('cashSaleStations',(from?.selectedOptions?.[0]?.text||'—')+' → '+(to?.selectedOptions?.[0]?.text||'—'));put('cashSaleCategory',cat?.selectedOptions?.[0]?.text||'—');put('cashSaleUnit',fmt(get('ticketPrice')?.value||0));put('cashSaleQty',Math.max(1,Math.floor(Number(get('ticketQuantity')?.value||1))));put('cashSaleTotal',fmt(total));put('cashSaleReceived',fmt(received));put('cashSaleChange',fmt(change));
   }
   window.updateCashSaleSummary=updateCashSaleSummary;
   window.updateCashRegister = function(){
@@ -241,6 +241,8 @@ function refundBatch(){
     const msg = document.getElementById('cashRegisterMessage');
     if(total) total.textContent = price.toFixed(2) + ' BYN';
     if(change) change.textContent = Math.max(0, received - price).toFixed(2) + ' BYN';
+    if(window.updateCashSaleSummary)window.updateCashSaleSummary();
+    const status=document.getElementById('cashPaymentStatus');if(status)status.textContent=received<price?'Недостаточно денег':(received===price?'Без сдачи':'Сдача рассчитана');
     if(msg){
       if(window.__cashPaymentMethod === 'card') msg.textContent = 'Оплата картой: сумма списывается без наличной сдачи.';
       else if(received < price) msg.textContent = 'Внесите сумму не меньше стоимости билета.';
