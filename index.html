@@ -257,7 +257,7 @@ function refundBatch(){
     if(!modal) return;
     window.__cashPaymentMethod = 'cash';
     const input = document.getElementById('cashReceivedInput');
-    if(input) input.value = cashPrice().toFixed(2);
+    if(input) input.value = String(Math.ceil(cashPrice() * 100) / 100);
     const method = document.getElementById('cashPaymentMethod');
     if(method) method.textContent = 'Наличные';
     modal.hidden = false;
@@ -320,6 +320,9 @@ function refundBatch(){
     if(issued){
       window.closeCashRegister();
       window.__cashPaymentMethod = null;
+      const quantityInput=document.getElementById('ticketQuantity');
+      if(quantityInput){quantityInput.value='1';quantityInput.dispatchEvent(new Event('input',{bubbles:true}));}
+      if(window.updateCashSaleSummary)window.updateCashSaleSummary();
     }
   };
 
