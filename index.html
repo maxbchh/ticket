@@ -169,6 +169,7 @@ function refundBatch(){
 
 </script>
 <style>
+.cash-sale-quick-action{margin:0 0 14px}.cash-sale-quick-action .btn{width:100%;min-height:54px;font-size:1.05rem;font-weight:800;border-radius:14px;box-shadow:0 6px 18px rgba(34,197,94,.22)}@media(max-width:600px){.cash-sale-quick-action .btn{min-height:60px;font-size:1.08rem}}
 .cash-sale-summary{margin:0 0 14px;background:linear-gradient(135deg,#111827,#263244);color:#f8fafc;border:1px solid rgba(148,163,184,.25);border-radius:18px;padding:18px;box-shadow:0 12px 32px rgba(0,0,0,.18)}.cash-sale-summary .sales-design-line{display:flex;justify-content:space-between;gap:14px;padding:6px 0;color:#d1d5db}.cash-sale-summary .sales-design-line strong{text-align:right;overflow-wrap:anywhere}.cash-sale-summary .sales-design-total strong{color:#22c55e}.cash-sale-summary .sales-design-heading{font-size:1.08rem;font-weight:800;margin-bottom:12px}.cash-sale-summary .sales-design-divider{height:1px;background:rgba(255,255,255,.2);margin:10px 0}#cashRegisterModal{position:fixed;inset:0;background:rgba(8,18,35,.45);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;z-index:10000;padding:14px}
 #cashRegisterModal.open{display:flex}
 .cash-register-dialog{width:min(520px,100%);max-height:92vh;overflow:auto;background:rgba(248,251,255,.96);border:1px solid rgba(255,255,255,.9);border-radius:24px;padding:18px;box-shadow:0 24px 80px rgba(20,40,80,.28)}
@@ -194,7 +195,7 @@ function refundBatch(){
 <div class="sales-design-line"><span>Стоимость одного билета</span><strong id="cashSaleUnit">0,00 BYN</strong></div>
 <div class="sales-design-line"><span>Количество билетов</span><strong id="cashSaleQty">1</strong></div>
 <div class="sales-design-divider"></div>
-<div class="sales-design-line sales-design-total"><span>Итого к оплате</span><strong id="cashSaleTotal">0,00 BYN</strong></div><div class="sales-design-divider"></div><div class="sales-design-line"><span>Клиент дал</span><strong id="cashSaleReceived">0,00 BYN</strong></div><div class="sales-design-line sales-design-total"><span>Сдача</span><strong id="cashSaleChange">0,00 BYN</strong></div></div><div class="cash-register-grid">
+<div class="sales-design-line sales-design-total"><span>Итого к оплате</span><strong id="cashSaleTotal">0,00 BYN</strong></div><div class="sales-design-divider"></div><div class="sales-design-line"><span>Клиент дал</span><strong id="cashSaleReceived">0,00 BYN</strong></div><div class="sales-design-line sales-design-total"><span>Сдача</span><strong id="cashSaleChange">0,00 BYN</strong></div></div><div class="cash-sale-quick-action"><button class="btn btn-green" type="button" onclick="confirmCashPayment()">✅ Оплатил и выпустить</button></div><div class="cash-register-grid">
       <div class="cash-register-box">
         <label>Общая стоимость билетов</label>
         <div class="cash-register-total" id="cashTicketTotal">0.00 BYN</div>
