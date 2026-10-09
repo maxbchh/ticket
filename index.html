@@ -280,7 +280,7 @@ function refundBatch(){
 
   window.setCashExact = function(){
     const input = document.getElementById('cashReceivedInput');
-    if(input) input.value = cashPrice().toFixed(2);
+    if(input) input.value = String(Math.ceil(cashPrice()));
     window.__cashPaymentMethod = 'cash';
     const method = document.getElementById('cashPaymentMethod');
     if(method) method.textContent = 'Наличные';
@@ -488,7 +488,7 @@ function refundBatch(){
     oldOpen();
     setTimeout(()=>{
       const input=document.getElementById('cashReceivedInput');
-      if(input){input.focus();input.select()}
+      if(input){input.value=String(Math.ceil(cashPrice()));input.focus();input.select();updateCashRegister();}
       let box=document.getElementById('cashSuggestions');
       if(!box){
         const host=input?.parentElement;
