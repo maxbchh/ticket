@@ -254,7 +254,7 @@ function refundBatch(){
   };
 
   window.confirmCashPayment = function(){
-    const price = Math.max(0, Number(document.getElementById('ticketPrice')?.value || 0));
+    const price = cashPrice();
     const received = Math.max(0, Number(document.getElementById('cashReceivedInput')?.value || 0));
 
     if(!state.shiftActive){
