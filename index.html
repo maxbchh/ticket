@@ -907,16 +907,19 @@ window.addEventListener('load',()=>{const saved=JSON.parse(localStorage.getItem(
     var before=(state.tickets||[]).length;
     var result=originalProcess.apply(this,arguments);
     var added=(state.tickets||[]).length>before?state.tickets[state.tickets.length-1]:null;
-    if(added&&quickUniversalPending){
-      added.price=QUICK_PRICE;
-      added.route='Универсальный талон';
-      added.note='Быстрый универсальный билет';
-      added.passenger='full';
-      added.paymentMethod=window.__cashPaymentMethod==='card'?'Карта':'Наличные';
-      added.paymentStatus='Оплачено';
-      added.purchaseId='quick_'+added.num+'_'+Date.now();
+    if(added){
+      var quick=quickUniversalPending;
+      if(quick){
+        added.price=QUICK_PRICE;
+        added.route='Универсальный талон';
+        added.note='Быстрый универсальный билет';
+        added.passenger='full';
+        added.paymentMethod=window.__cashPaymentMethod==='card'?'Карта':'Наличные';
+        added.paymentStatus='Оплачено';
+        added.purchaseId='quick_'+added.num+'_'+Date.now();
+      }
       state.operations=Array.isArray(state.operations)?state.operations:[];
-      state.operations.push({time:new Date().toLocaleString('ru-RU'),type:'Продажа быстрого билета',ticket:added.num,amount:QUICK_PRICE,conductor:state.conductorName||'Кондуктор',details:'Универсальный билет · '+(added.from||'')+' → '+(added.to||'')+' · '+added.paymentMethod});
+      state.operations.push({time:new Date().toLocaleString('ru-RU'),type:quick?'Продажа быстрого билета':'Продажа билета',ticket:added.num,amount:Number(added.price||0),conductor:state.conductorName||'Кондуктор',details:(quick?'Универсальный билет':'Билет по маршруту')+' · '+(added.from||'')+' → '+(added.to||'')+(added.paymentMethod?' · '+added.paymentMethod:'')});
       quickUniversalPending=false;
       saveState();
       refresh();
