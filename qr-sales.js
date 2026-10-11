@@ -181,10 +181,9 @@
     try {
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js', function () { return typeof window.QRCode === 'function'; });
       holder.innerHTML = '';
-      var token = 'qr_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 12);
       var ticketUrl = new URL('qr-ticket.html', window.location.href);
       ticketUrl.search = '';
-      ticketUrl.searchParams.set('token', token);
+      ticketUrl.hash = '';
       new window.QRCode(holder, { text: ticketUrl.href, width: 220, height: 220, correctLevel: window.QRCode.CorrectLevel.M });
       var hint = panel.querySelector('[data-qr-link-hint]');
       if (!hint) {
@@ -193,7 +192,7 @@
         hint.style.cssText = 'font-size:.82rem;color:var(--text-secondary);margin-top:10px;overflow-wrap:anywhere';
         holder.parentNode.insertBefore(hint, holder.nextSibling);
       }
-      hint.textContent = 'На другом телефоне открой обычную камеру, наведи на код и нажми ссылку. Откроется страница «Билет оплачен», а талон автоматически запишется в общую систему. Код одноразовый — для следующего талона покажи новый QR-код.';
+      hint.textContent = 'Это постоянный QR-код: распечатай его и приклей на стол. На другом телефоне открой обычную камеру, наведи на код и нажми ссылку. На странице нажми «Оплатить и получить талон» для каждого нового талона. Само открытие и обновление страницы ничего не списывает и не создаёт.';
     } catch (_) {
       toast('Не удалось создать QR-код', 'Проверь подключение к интернету и попробуй ещё раз.', 'error');
     }
