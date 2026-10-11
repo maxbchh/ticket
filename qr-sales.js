@@ -131,14 +131,26 @@
     toast('Оплата талона прошла успешно', 'Универсальный талон №' + ticket.num + ' — ' + money(PRICE) + '. Он добавлен в историю смены.', 'success');
     return true;
   }
+  function isTicketQrPayload(payload) {
+    if (payload === QR_PAYLOAD) return true;
+    // The printed permanent QR contains a link to qr-ticket.html, not QR_PAYLOAD.
+    // Accept only this site's own ticket page so unrelated QR links are rejected.
+    try {
+      var scannedUrl = new URL(payload, window.location.href);
+      var currentUrl = new URL(window.location.href);
+      return scannedUrl.origin === currentUrl.origin && /(?:^|\/)qr-ticket\.html$/i.test(scannedUrl.pathname);
+    } catch (_) {
+      return false;
+    }
+  }
   function acceptQrPayload(decodedText) {
     var payload = String(decodedText || '').trim();
     var now = Date.now();
     if (payload === lastScanPayload && now - lastScanAt < 3000) return;
     lastScanPayload = payload;
     lastScanAt = now;
-    if (payload !== QR_PAYLOAD) {
-      toast('Это не QR-талон «Тикет»', 'Отсканируй QR-код универсального талона из вкладки «QR-талон».', 'warning');
+    if (!isTicketQrPayload(payload)) {
+      toast('Это не QR-талон «Тикет»', 'Отсканируй постоянный QR-код со ссылкой на страницу qr-ticket.html или код универсального талона.', 'warning');
       return;
     }
     if (!shiftIsOpen()) {
