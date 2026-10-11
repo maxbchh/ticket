@@ -203,7 +203,23 @@ function refundBatch(){
       <div class="cash-register-box">
         <label>Получено от пассажира</label>
         <input id="cashReceivedInput" type="number" min="0" step="0.01" value="0.00" oninput="updateCashRegister()">
-        <div id="cashSuggestions" class="cash-suggestions"></div>
+        <div id="cashSuggestions" class="cash-suggestions">
+          <button type="button" class="cash-suggestion" onclick="setCashReceived(1)">1 BYN</button>
+          <button type="button" class="cash-suggestion" onclick="setCashReceived(2)">2 BYN</button>
+          <button type="button" class="cash-suggestion" onclick="setCashReceived(3)">3 BYN</button>
+          <button type="button" class="cash-suggestion" onclick="setCashReceived(4)">4 BYN</button>
+          <button type="button" class="cash-suggestion" onclick="setCashReceived(5)">5 BYN</button>
+          <button type="button" class="cash-suggestion" onclick="setCashReceived(10)">10 BYN</button>
+          <button type="button" class="cash-suggestion" onclick="setCashReceived(15)">15 BYN</button>
+          <button type="button" class="cash-suggestion" onclick="setCashReceived(20)">20 BYN</button>
+          <button type="button" class="cash-suggestion" onclick="setCashReceived(25)">25 BYN</button>
+          <button type="button" class="cash-suggestion" onclick="setCashReceived(30)">30 BYN</button>
+          <button type="button" class="cash-suggestion" onclick="setCashReceived(35)">35 BYN</button>
+          <button type="button" class="cash-suggestion" onclick="setCashReceived(40)">40 BYN</button>
+          <button type="button" class="cash-suggestion" onclick="setCashReceived(45)">45 BYN</button>
+          <button type="button" class="cash-suggestion" onclick="setCashReceived(50)">50 BYN</button>
+          <button type="button" class="cash-suggestion" onclick="setCashReceived(100)">100 BYN</button>
+        </div>
       </div>
     </div>
     <div class="cash-register-grid" style="margin-top:10px">
@@ -491,7 +507,7 @@ function refundBatch(){
       const input=document.getElementById('cashReceivedInput');
       if(input){input.value=String(Math.ceil(cashPrice()));input.focus();input.select();updateCashRegister();}
       const box=document.getElementById('cashSuggestions');
-      if(box)box.innerHTML=[1,2,3,4,5,10,15,20,25,30,35,40,45,50,100].map(v=>'<button type="button" class="cash-suggestion" onclick="setCashReceived('+v+')">'+v+' BYN</button>').join('');
+      if(box && !box.querySelector('button')) box.innerHTML=[1,2,3,4,5,10,15,20,25,30,35,40,45,50,100].map(v=>'<button type="button" class="cash-suggestion" onclick="setCashReceived('+v+')">'+v+' BYN</button>').join('');
     },80);
   };
   window.setCashReceived=function(v){
