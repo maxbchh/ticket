@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f4f7fb">
+<title>Универсальный талон — Тикет</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172033;background:#f3f6fb}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:radial-gradient(circle at 10% 0%,#dcecff,transparent 40%),linear-gradient(135deg,#f8fbff,#edf2f8)}
+.card{width:min(460px,100%);padding:28px 24px;border-radius:26px;background:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.95);box-shadow:0 20px 60px rgba(30,50,80,.14);text-align:center;backdrop-filter:blur(18px)}
+.icon{width:76px;height:76px;margin:0 auto 18px;border-radius:24px;display:grid;place-items:center;background:#dcfce7;color:#15803d;font-size:40px}
+h1{font-size:1.7rem;letter-spacing:-.04em;margin:0 0 10px}p{color:#657087;line-height:1.5;margin:8px 0}.price{font-size:2rem;font-weight:850;color:#15803d;margin:18px 0 6px}.muted{font-size:.82rem;margin-top:18px}.state{padding:12px 14px;border-radius:14px;background:#f1f5f9;color:#334155;margin-top:16px;font-size:.92rem}
+</style>
+</head>
+<body>
+<main class="card">
+  <div id="statusIcon" class="icon">⌛</div>
+  <h1 id="title">Оформляем талон…</h1>
+  <p id="description">Подключаемся к системе учёта «Тикет».</p>
+  <div class="price">1,79 BYN</div>
+  <p>Универсальный талон</p>
+  <div id="details" class="state">Пожалуйста, не закрывай эту страницу.</div>
+  <p class="muted">Это подтверждение оплаты внутри системы учёта. Деньги с банковской карты не списываются.</p>
+</main>
+<script>
+(function(){
+  'use strict';
+  var SUPABASE_URL='https://ubhfigqpsepnpokrbdyo.supabase.co';
+  var SUPABASE_KEY='sb_publishable_yN8W8pvQq8hWsYMO8z1Rzw_6zKQ-8D1';
+  var ROW_URL=SUPABASE_URL+'/rest/v1/ticket_shared_state';
+  var PRICE=1.79;
+  var token=new URLSearchParams(location.search).get('token')||'';
+  var $=function(id){return document.getElementById(id)};
+  function show(icon,title,description,details,ok){
+    $('statusIcon').textContent=icon;
+    $('statusIcon').style.background=ok?'#dcfce7':'#fee2e2';
+    $('statusIcon').style.color=ok?'#15803d':'#b91c1c';
+    $('title').textContent=title;
+    $('description').textContent=description;
+    $('details').textContent=details;
+  }
+  async function run(){
+    if(!/^qr_[a-z0-9]+_[a-z0-9]+$/i.test(token)){
+      show('!', 'QR-ссылка недействительна', 'Не удалось распознать ссылку универсального талона.', 'Вернись к кассиру и попроси показать новый QR-код.', false);return;
+    }
+    try{
+      var headers={'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'};
+      var response=await fetch(ROW_URL+'?select=data&id=eq.main',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY},cache:'no-store'});
+      if(!response.ok)throw new Error('Не удалось подключиться к системе учёта ('+response.status+').');
+      var rows=await response.json(),row=rows&&rows[0];
+      if(!row||!row.data)throw new Error('Общая база данных пока не настроена.');
+      var data=row.data;
+      data.qrRedeemedTokens=Array.isArray(data.qrRedeemedTokens)?data.qrRedeemedTokens:[];
+      var existing=data.qrRedeemedTokens.indexOf(token);
+      if(existing!==-1){
+        var known=(data.tickets||[]).find(function(t){return t.qrToken===token});
+        show('✓','Билет уже оплачен','Этот QR-код уже был использован.',known?'Билет №'+known.num+' · 1,79 BYN. Повторная продажа не создана.':'Повторная продажа не создана.',true);return;
+      }
+      if(!(data.shiftActive===true||data.shiftActive==='true')){
+        show('!','Кассовая смена закрыта','Талон не был оформлен.','Попроси кассира открыть смену и показать новый QR-код.',false);return;
+      }
+      var tickets=Array.isArray(data.tickets)?data.tickets:[];
+      var num=Math.max(Number(data.lastTicketNum)||1001,1001);
+      tickets.forEach(function(t){num=Math.max(num,(Number(t.num)||0)+1)});
+      var now=new Date(),iso=now.toISOString();
+      var purchaseId='qr_link_'+token;
+      var ticket={num:num,id:'ticket_'+purchaseId,time:now.toLocaleTimeString('ru-RU'),route:'Универсальный талон',routeId:null,from:'Универсальный',to:'Универсальный',price:PRICE,status:'active',conductor:data.conductorName||'Кондуктор',passenger:'full',note:'Автоматический талон по QR-ссылке',paymentMethod:'QR-ссылка',paymentStatus:'Оплачено в учёте',purchaseId:purchaseId,purchasedAt:iso,issuedAt:iso,shiftId:'shift_qr_'+iso.slice(0,10),tripId:null,qrToken:token};
+      data.tickets=tickets.concat([ticket]);
+      data.lastTicketNum=num+1;
+      data.qrRedeemedTokens.push(token);
+      data.operations=Array.isArray(data.operations)?data.operations:[];
+      data.operations.push({id:'op_'+purchaseId,time:now.toLocaleString('ru-RU'),type:'Продажа QR-ссылка',ticket:num,amount:PRICE,conductor:data.conductorName||'Кондуктор',details:'Универсальный талон автоматически оплачен и записан по QR-ссылке',createdAt:iso});
+      var save=await fetch(ROW_URL,{method:'POST',headers:Object.assign({},headers,{'Prefer':'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({id:'main',data:data,updated_at:iso})});
+      if(!save.ok)throw new Error('Не удалось сохранить талон в общей базе ('+save.status+').');
+      show('✓','Билет оплачен','Универсальный талон успешно оформлен.','Билет №'+num+' · 1,79 BYN. Он записан в общую историю покупок и операции кассы.',true);
+    }catch(e){
+      show('!', 'Не удалось оформить билет', 'Талон пока не записан в систему.',e&&e.message?e.message:'Проверь подключение к интернету и попробуй ещё раз.',false);
+    }
+  }
+  run();
+})();
+</script>
+</body>
+</html>
