@@ -79,6 +79,7 @@
 <div class="form-group"><label>Маршрут</label><select id="shiftRouteSelect"></select></div>
 <div class="form-group"><label>Отправление</label><input id="shiftDepartureTime" type="time" value="11:00"></div>
 <div class="form-group"><label>Прибытие</label><input id="shiftArrivalTime" type="time" value="11:45"></div>
+ <div class="form-group"><label>Время в игре при начале смены</label><input id="shiftGameStartTime" type="time" value="07:00"><small style="color:var(--text-secondary)">Фактическое время остановок будет идти от этого времени, а не от часов компьютера.</small></div>
 </div>
 <div id="shiftRouteInfo" class="feature-stat" style="margin-top:10px">Выберите транспорт и маршрут — здесь появятся начальная и конечная остановки.</div>
 <button class="btn btn-green btn-block" type="button" onclick="startDriverShift()">🟢 Заступить на смену</button>
@@ -799,6 +800,7 @@ function routeList(type){return (state.routes||[]).filter(r=>r.transport===type|
 function routeLabel(r){return r.name||r.route||'Без названия';}
 function routeKey(r){return norm(routeLabel(r)).replace(/\s*\((?:обратный|обратно|реверс)\)\s*$/,'').replace(/\s*(?:↔|←|→).*$/,'').trim();}
 function fmtTime(d){return d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+ function gameClockNow(s){const p=String(s?.gameStartTime||'07:00').split(':').map(Number),base=(p[0]||0)*60+(p[1]||0),started=Number(s?.realStartedAt||Date.parse(s?.startedAt)||Date.now()),elapsed=Math.max(0,Math.floor((Date.now()-started)/60000)),minutes=base+elapsed;return {date:new Date(2000,0,1,Math.floor(minutes/60)%24,minutes%60,0),minutes:minutes%1440};}
 function parseMinutes(v){const [h,m]=String(v||'00:00').split(':').map(Number);return (h||0)*60+(m||0);}
 function timeFromMinutes(m){m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(Math.round(m%60)).padStart(2,'0');}
 function buildTimes(r,dep,arr){const n=(r.stops||[]).length;if(!n)return[];const a=parseMinutes(dep),b=parseMinutes(arr);let diff=b-a;if(diff<0)diff+=1440;return r.stops.map((_,i)=>timeFromMinutes(a+diff*(i/Math.max(1,n-1))));}
@@ -845,8 +847,8 @@ window.startDriverShift=function(){
  if(!r){alert('Выберите маршрут.');return}
  const vehicle=$('shiftVehicleModel').value.trim();if(!vehicle){alert('Укажите модель или борт автобуса.');return}
  if((r.stops||[]).length<2){alert('В маршруте должно быть минимум 2 остановки.');return}
- const dep=$('shiftDepartureTime').value,arr=$('shiftArrivalTime').value,times=buildTimes(r,dep,arr);
- state.driverShift={active:true,startedAt:new Date().toISOString(),transport:type,vehicle,routeId:r.id,routeName:routeLabel(r),departure:dep,arrival:arr,index:0,stops:r.stops.map((name,i)=>({name,planned:times[i],actual:null,delay:null}))};
+ const dep=$('shiftDepartureTime').value,arr=$('shiftArrivalTime').value,gameStart=$('shiftGameStartTime')?.value||'07:00',times=buildTimes(r,dep,arr),realStartedAt=Date.now();
+ state.driverShift={active:true,startedAt:new Date(realStartedAt).toISOString(),realStartedAt,gameStartTime:gameStart,transport:type,vehicle,routeId:r.id,routeName:routeLabel(r),departure:dep,arrival:arr,index:0,stops:r.stops.map((name,i)=>({name,planned:times[i],actual:null,delay:null}))};
  state.currentTripId='trip_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
  localStorage.setItem('conductor_current_trip_id',state.currentTripId);localStorage.setItem('conductor_current_trip_route',String(r.id));
  state.tripStop={routeId:r.id,index:0};
@@ -855,15 +857,15 @@ window.startDriverShift=function(){
 }
 window.driverNextStop=function(){
  const s=current();if(!s)return;
- const now=new Date(),x=s.stops[s.index];x.actual=fmtTime(now);
- const planned=parseMinutes(x.planned),actual=now.getHours()*60+now.getMinutes();
+ const clock=gameClockNow(s),now=clock.date,x=s.stops[s.index];x.actual=fmtTime(now);
+ const planned=parseMinutes(x.planned),actual=clock.minutes;
  let d=actual-planned;if(d>720)d-=1440;if(d<-720)d+=1440;x.delay=d;
  if(s.index>=s.stops.length-1){render();return}
  s.index++;state.tripStop={routeId:s.routeId,index:s.index};save();render();
 }
 window.finishDriverShift=function(){
  const s=current();if(!s)return;
- const x=s.stops[s.index];if(!x.actual){const now=new Date();x.actual=fmtTime(now);let d=now.getHours()*60+now.getMinutes()-parseMinutes(x.planned);if(d>720)d-=1440;if(d<-720)d+=1440;x.delay=d}
+ const x=s.stops[s.index];if(!x.actual){const clock=gameClockNow(s),now=clock.date;x.actual=fmtTime(now);let d=clock.minutes-parseMinutes(x.planned);if(d>720)d-=1440;if(d<-720)d+=1440;x.delay=d}
  s.active=false;s.finishedAt=new Date().toISOString();state.driverShift=s;save();
  state.currentTripId=null;localStorage.removeItem('conductor_current_trip_id');localStorage.removeItem('conductor_current_trip_route');
  render();
