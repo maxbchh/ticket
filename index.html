@@ -37,7 +37,27 @@
 .shift-time-card{padding:14px;border-radius:14px;background:var(--bg-input);border:1px solid var(--border-color);text-align:center}
 .shift-time-card span{display:block;color:var(--text-secondary);font-size:.8rem}.shift-time-card strong{display:block;font-size:1.5rem;margin-top:4px}
 @media(max-width:600px){.shift-time-grid{grid-template-columns:1fr}}
-</style></head><body>
+<style id="mobile-route-layout-fix">
+/* Mobile layout fix: keep the route constructor inside the viewport */
+html,body{max-width:100%;min-width:0}
+body{overflow-x:hidden}
+.main-layout,.left-column,.right-column,.tab-content,.card,#tab-routes{min-width:0;max-width:100%}
+#tab-routes .form-grid{grid-template-columns:minmax(0,1fr)}
+#tab-routes .form-group,#tab-routes input,#tab-routes select,#tab-routes textarea{min-width:0;max-width:100%}
+#tab-routes textarea{display:block;width:100%;resize:vertical}
+#tab-routes .table-responsive{display:block;width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y}
+#tab-routes table{min-width:620px}
+#tab-routes .card-title{flex-wrap:wrap;gap:8px}
+#tab-routes .ops-actions,#tab-routes .route-actions{flex-wrap:wrap}
+@media(max-width:600px){
+ body{padding:8px}
+ .main-layout{display:block;width:100%}
+ .card{padding:12px;border-radius:14px}
+ #tab-routes .btn{max-width:100%;white-space:normal}
+ #tab-routes .table-responsive{margin-right:0}
+ .tabs-nav{max-width:100%;overscroll-behavior-x:contain}
+}
+</style></style></head><body>
 <div class="top-status-bar"><div class="status-title"><span>📠 ТЕРМИНАЛ КОНДУКТОРА</span><span id="shiftBadge" class="badge badge-closed">СМЕНА ЗАКРЫТА</span></div><div class="status-info"><div>Транспорт: <strong id="currentTransportLabel">Узкоколейная ЖД</strong></div><div>Продано билетов: <strong id="totalShiftTickets">0</strong></div><div>Выручка: <strong id="totalShiftRevenue">0.00 BYN</strong></div><div><span id="liveClock">00:00:00</span></div></div></div>
 <div class="tabs-nav"><button class="tab-btn" onclick="switchTab('driverShift',this)">🚌 Смена</button><button class="tab-btn active" onclick="switchTab('terminal',this)">🎟️ Выпуск Билета</button><button class="tab-btn" onclick="switchTab('routes',this)">🗺️ Конструктор Маршрутов</button><button class="tab-btn" onclick="switchTab('shift',this)">📜 Журнал & Z-Отчёт</button><button class="tab-btn" onclick="switchTab('operations',this)">🎫 Билеты и Операции</button><button class="tab-btn" onclick="switchTab('qrTickets',this)">📷 QR-талон</button><button class="tab-btn" onclick="switchTab('settings',this)">⚙️ Настройки Терминала</button></div>
 <div class="main-layout"><div class="left-column">
