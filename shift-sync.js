@@ -16,6 +16,7 @@ async function syncShift(){
  if(running||!ENDPOINT||!API_KEY)return;
  var shift=parseStored(),raw=JSON.stringify(shift);
  if(raw===lastLocal)return;
+ if(!shift){lastLocal=raw;return;}
  running=true;
  try{
   var h={apikey:API_KEY,Authorization:'Bearer '+API_KEY};
