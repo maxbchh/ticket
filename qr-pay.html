@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f4f7fb">
+<title>Покупка билета — Тикет</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172033;background:#f3f6fb}*{box-sizing:border-box}body{margin:0;min-height:100vh;padding:18px;display:grid;place-items:center;background:radial-gradient(circle at 10% 0%,#dcecff,transparent 40%),linear-gradient(135deg,#f8fbff,#edf2f8)}main{width:min(520px,100%);padding:24px;border:1px solid rgba(255,255,255,.95);border-radius:24px;background:rgba(255,255,255,.92);box-shadow:0 20px 60px #1e32501c;backdrop-filter:blur(18px)}h1{margin:0 0 8px;font-size:1.55rem}p{line-height:1.45;color:#64748b}.field{margin:16px 0;text-align:left}label{display:block;font-size:.9rem;font-weight:750;margin-bottom:7px}select{width:100%;padding:14px;border:1px solid #dbe3ee;border-radius:12px;background:#fff;font:inherit;color:#172033}.current{padding:14px;border-radius:14px;background:#eff6ff;margin:16px 0}.price{font-size:1.7rem;font-weight:850;color:#15803d;margin:14px 0}button{width:100%;border:0;border-radius:14px;background:#1677f2;color:white;font-size:1rem;font-weight:800;padding:15px;cursor:pointer;margin-top:10px}button:disabled{opacity:.55;cursor:wait}.state{padding:12px 14px;border-radius:12px;background:#f1f5f9;margin-top:14px;font-size:.9rem;white-space:pre-line}.small{font-size:.78rem!important}.methods{display:grid;grid-template-columns:1fr 1fr;gap:10px}.method{display:flex;gap:8px;align-items:center;border:1px solid #dbe3ee;border-radius:12px;padding:12px}.method input{width:18px;height:18px}
+</style>
+</head>
+<body><main>
+<h1>🎫 Покупка билета</h1><p>Остановка отправления определяется автоматически по водительской смене и обновляется, когда водитель нажимает «Следующая остановка».</p>
+<div id="currentStop" class="current">Подключаемся к общей базе…</div>
+<div class="field"><label for="destination">Куда едете?</label><select id="destination" disabled><option>Ожидаем маршрут…</option></select></div>
+<div class="field"><label>Способ оплаты</label><div class="methods"><label class="method"><input type="radio" name="method" value="Наличные" checked> Наличные</label><label class="method"><input type="radio" name="method" value="Карта"> Карта</label></div></div>
+<div class="price" id="price">— BYN</div>
+<button id="buy" type="button" disabled>Оплатить и получить билет</button>
+<div id="result" class="state">Ожидаем активную водительскую смену.</div>
+<p class="small">Оплата здесь регистрируется в системе учёта «Тикет». Банковские средства не списываются: для настоящей оплаты картой нужен подключённый платёжный провайдер.</p>
+</main>
+<script>
+(function(){
+'use strict';
+var URL='',KEY='',rowUrl='',data=null,route=null,shift=null,fromIndex=-1,toIndex=-1,busy=false,lastRequest='',polling=false;
+var $=function(id){return document.getElementById(id)};
+function show(text,ok){$('result').textContent=text;$('result').style.background=ok?'#dcfce7':'#f1f5f9';}
+function money(n){return (Math.round((Number(n)||0)*100)/100).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' BYN';}
+async function config(){var res=await fetch('./cloud-sync.js',{cache:'no-store'});if(!res.ok)throw Error('Не удалось загрузить настройки общей базы.');var t=await res.text();var u=t.match(/const URL='([^']+)'/),k=t.match(/const KEY='([^']+)'/);if(!u||!k)throw Error('Настройки общей базы не найдены.');URL=u[1];KEY=k[1];rowUrl=URL+'?select=data,updated_at&id=eq.main';}
+async function read(){var res=await fetch(rowUrl,{headers:{apikey:KEY,Authorization:'Bearer '+KEY},cache:'no-store'});if(!res.ok)throw Error('Ошибка общей базы ('+res.status+').');var rows=await res.json();return rows&&rows[0]?rows[0].data:null;}
+function stopName(i){return route&&route.stops?String(route.stops[i]||''):'';}
+function fare(from,to){var steps=Math.max(1,to-from),per=Number(route&&route.farePerStop)||0,min=Number(route&&route.minPrice)||0;var value=Math.max(min,per*steps);return Math.round(value*100)/100;}
+function refreshUI(){
+ var sel=$('destination'),old=sel.value;
+ if(!data||!data.driverShift||!data.driverShift.active||!data.shiftActive){shift=null;route=null;fromIndex=-1;sel.innerHTML='<option value="">Смена или маршрут не активны</option>';sel.disabled=true;$('buy').disabled=true;$('currentStop').textContent='Сейчас нет активной водительской смены. Попробуйте позже.';$('price').textContent='— BYN';return;}
+ shift=data.driverShift;
+ route=(data.routes||[]).find(function(r){return String(r.id)===String(shift.routeId);});
+ if(!route||!Array.isArray(route.stops)||route.stops.length<2){sel.innerHTML='<option value="">Маршрут не найден</option>';sel.disabled=true;$('buy').disabled=true;$('currentStop').textContent='В активной смене не найден маршрут. Попросите водителя проверить смену.';return;}
+ fromIndex=Math.max(0,Math.min(Number(shift.index)||0,route.stops.length-1));
+ $('currentStop').textContent='🚌 Маршрут: '+(route.name||route.route||'')+'\n🚏 Отправление: '+stopName(fromIndex)+'\nОстановка обновляется автоматически.';
+ sel.innerHTML='';
+ for(var i=fromIndex+1;i<route.stops.length;i++){var o=document.createElement('option');o.value=String(i);o.textContent=route.stops[i];sel.appendChild(o);}
+ if(!sel.options.length){sel.innerHTML='<option value="">Конечная остановка достигнута</option>';sel.disabled=true;$('buy').disabled=true;$('price').textContent='— BYN';show('Автобус уже на последней остановке.',false);return;}
+ sel.disabled=false;
+ if(old&&Number(old)>fromIndex&&Number(old)<route.stops.length)sel.value=old;
+ else sel.selectedIndex=0;
+ updateFare();
+}
+function updateFare(){toIndex=Number($('destination').value);if(!route||fromIndex<0||!Number.isFinite(toIndex)||toIndex<=fromIndex){$('price').textContent='— BYN';$('buy').disabled=true;return;}$('price').textContent=money(fare(fromIndex,toIndex));$('buy').disabled=busy;}
+async function poll(){if(polling)return;polling=true;try{var next=await read();if(next){data=next;refreshUI();}}catch(e){if(!data)show(e.message||'Нет связи с общей базой.',false);}finally{polling=false;}}
+async function buy(){if(busy)return;if(!data||!route||fromIndex<0||toIndex<=fromIndex){show('Нет актуальной остановки или маршрута. Обновляем данные…',false);await poll();return;}
+ busy=true;$('buy').disabled=true;
+ try{
+ var fresh=await read();if(!fresh)throw Error('Общая база не настроена.');data=fresh;var s=data.driverShift,r=(data.routes||[]).find(function(x){return s&&String(x.id)===String(s.routeId);});var fi=s&&Number(s.index);
+ if(!data.shiftActive||!s||!s.active||!r||!Number.isFinite(fi))throw Error('Водительская смена завершена. Обнови страницу позже.');
+ if(fi!==fromIndex){fromIndex=fi;route=r;refreshUI();throw Error('Остановка изменилась. Проверь новое отправление и нажми оплату ещё раз.');}
+ var ti=Number($('destination').value);if(ti<=fi||ti>=r.stops.length)throw Error('Выбранная остановка уже пройдена. Выбери остановку впереди.');
+ var method=document.querySelector('input[name="method"]:checked')?.value||'Наличные';
+ var now=new Date(),iso=now.toISOString(),req='qrpay_'+(window.crypto&&crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10));
+ var tickets=Array.isArray(data.tickets)?data.tickets:[],num=Math.max(Number(data.lastTicketNum)||1001,1001);tickets.forEach(function(t){num=Math.max(num,(Number(t.num)||0)+1);});
+ var price=Math.round(Math.max(Number(r.minPrice)||0,(Number(r.farePerStop)||0)*(ti-fi))*100)/100;
+ var ticket={num:num,id:'ticket_'+req,route:r.name||r.route||'Маршрут',routeId:r.id,tripId:s.tripId||null,from:r.stops[fi],to:r.stops[ti],fromIndex:fi,toIndex:ti,price:price,status:'active',conductor:data.conductorName||'Кондуктор',passenger:'full',note:'Покупка по QR-коду пассажиром',paymentMethod:method,paymentStatus:'Оплачено в учёте',purchaseId:req,purchasedAt:iso,issuedAt:iso,shiftId:data.currentShiftId||null,qrPaymentId:req,qrCreatedAt:iso};
+ data.tickets=tickets.concat([ticket]);data.lastTicketNum=num+1;data.operations=Array.isArray(data.operations)?data.operations:[];data.operations.push({id:'op_'+req,time:now.toLocaleString('ru-RU'),type:'QR-билет по маршруту',ticket:num,amount:price,conductor:data.conductorName||'Кондуктор',details:(ticket.from+' → '+ticket.to+' · '+method),createdAt:iso});
+ var save=await fetch(URL,{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id:'main',data:data,updated_at:iso})});
+ if(!save.ok)throw Error('Не удалось записать билет в общую базу ('+save.status+').');
+ $('destination').disabled=true;document.querySelectorAll('input[name="method"]').forEach(function(x){x.disabled=true;});$('price').textContent=money(price);$('buy').textContent='Билет №'+num+' оформлен';show('Билет оплачен и записан в общую базу.\n'+ticket.from+' → '+ticket.to+'\n'+money(price)+' · '+method+'\nНомер билета: '+num,true);
+ }catch(e){show(e.message||'Не удалось оформить билет. Проверь связь и попробуй ещё раз.',false);busy=false;$('buy').disabled=false;}
+}
+$('destination').addEventListener('change',updateFare);$('buy').addEventListener('click',buy);
+(async function(){try{await config();await poll();setInterval(poll,2500);}catch(e){show(e.message||'Не удалось подключиться.',false);}})();
+})();
+</script></body></html>
