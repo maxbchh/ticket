@@ -61,7 +61,7 @@
       alert('В покупке нет товаров или сумма некорректна.');
       return;
     }
-    if (!window.state || !window.state.shiftActive) {
+    if (localStorage.getItem('conductor_shift_active') !== 'true') {
       alert('Сначала откройте кассовую смену во вкладке «Журнал & Z-Отчёт».');
       return;
     }
