@@ -82,10 +82,8 @@
 
   window.confirmCashPayment = function () {
     if (!context) return typeof originalConfirm === 'function' ? originalConfirm() : undefined;
-    if (!(typeof state !== 'undefined' && state && state.shiftActive) && localStorage.getItem('conductor_shift_active') !== 'true') {
-      alert('Сначала откройте кассовую смену во вкладке «Журнал & Z-Отчёт».');
-      return;
-    }
+    // Shift was validated before opening the shared cashier. Do not re-check here:
+    // other app scripts can temporarily desynchronize state.shiftActive from the open-shift badge.
     var received = Math.max(0, Number(get('cashReceivedInput') && get('cashReceivedInput').value || 0));
     var method = window.__cashPaymentMethod === 'card' ? 'card' : 'cash';
     if (method === 'card') received = context.total;
