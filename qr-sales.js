@@ -462,24 +462,24 @@
       if (!response.ok) return;
       var rows = await response.json(), cloudData = rows && rows[0] && rows[0].data;
       if (!cloudData || !Array.isArray(cloudData.tickets)) return;
-      var remote = cloudData.tickets.filter(function(t){ return t && t.qrPaymentId; });
+      var remote = cloudData.tickets.filter(function(t){ return t && (t.qrPaymentId || t.qrRequestId); });
       if (notifiedQrPayments === null) {
-        notifiedQrPayments = new Set(remote.map(function(t){return String(t.qrPaymentId);}));
+        notifiedQrPayments = new Set(remote.map(function(t){return String(t.qrPaymentId || t.qrRequestId);}));
         return;
       }
-      var fresh = remote.filter(function(t){ return !notifiedQrPayments.has(String(t.qrPaymentId)); });
+      var fresh = remote.filter(function(t){ return !notifiedQrPayments.has(String(t.qrPaymentId || t.qrRequestId)); });
       if (!fresh.length) return;
-      fresh.forEach(function(t){ notifiedQrPayments.add(String(t.qrPaymentId)); });
+      fresh.forEach(function(t){ notifiedQrPayments.add(String(t.qrPaymentId || t.qrRequestId)); });
       if (typeof state !== 'undefined') {
         state.tickets = safeArray(state.tickets);
-        fresh.forEach(function(t){ if(!state.tickets.some(function(x){return String(x.num)===String(t.num)||String(x.qrPaymentId||'')===String(t.qrPaymentId)}))state.tickets.push(t); });
+        fresh.forEach(function(t){ if(!state.tickets.some(function(x){return String(x.num)===String(t.num)||String(x.qrPaymentId||x.qrRequestId||'')===String(t.qrPaymentId||t.qrRequestId)}))state.tickets.push(t); });
         state.operations = safeArray(state.operations);
         (cloudData.operations||[]).filter(function(o){return fresh.some(function(t){return String(o.ticket)===String(t.num)&&String(o.type||'').indexOf('QR-билет')===0})}).forEach(function(o){if(!state.operations.some(function(x){return String(x.id||'')===String(o.id||'')}))state.operations.push(o);});
         state.lastTicketNum = Math.max(Number(state.lastTicketNum)||1001, Number(cloudData.lastTicketNum)||1001);
         try { localStorage.setItem('conductor_tickets',JSON.stringify(state.tickets));localStorage.setItem('conductor_operations',JSON.stringify(state.operations));localStorage.setItem('conductor_last_num',String(state.lastTicketNum)); } catch (_) {}
         renderAfterChange();
       }
-      fresh.forEach(function(t){ toast('Куплен QR-билет', 'Билет №'+t.num+': '+(t.from||'—')+' → '+(t.to||'—')+' · '+money(t.price)+' · '+(t.paymentMethod||'оплата'), 'success'); });
+      fresh.forEach(function(t){ toast('Куплен QR-талон', 'Билет №'+t.num+': '+(t.from||'—')+' → '+(t.to||'—')+' · '+money(t.price)+' · '+(t.paymentMethod||'оплата'), 'success'); });
     } catch (e) { console.warn('QR purchase notification unavailable', e); }
   }
   document.addEventListener('DOMContentLoaded', function () {
