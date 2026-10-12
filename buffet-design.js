@@ -37,12 +37,13 @@
       if (input && input.value !== theme[key]) input.value = theme[key];
     });
   }
-  function themeFromInputs() {
-    setTheme({
-      background: el('themeBackground').value,
-      accent: el('themeAccent').value,
-      hover: el('themeHover').value,
-      card: el('themeCard').value
+  function chooseThemeColor(key, color) {
+    var theme = Object.assign({}, defaults, read(THEME_KEY, {}));
+    theme[key] = color;
+    setTheme(theme);
+    document.querySelectorAll('[data-theme-key="' + key + '"]').forEach(function (b) {
+      b.classList.toggle('is-picked', b.getAttribute('data-color') === color);
+      b.setAttribute('aria-pressed', b.getAttribute('data-color') === color ? 'true' : 'false');
     });
   }
   function renderTheme() {
@@ -106,15 +107,37 @@
   function mountDesign() {
     var host = el('designApp');
     if (!host) return;
-    host.innerHTML = '<div class="card"><div class="card-title">🎨 Настройка оформления</div><p style="color:var(--text-secondary);margin-bottom:14px">Меняй фон сайта, основной цвет кнопок и цвет при наведении курсора. Настройки сохраняются в этом браузере. Кликабельность существующих элементов и их обработчики не меняются.</p>' +
-      '<div class="form-grid"><div class="form-group"><label for="themeBackground">Фон сайта</label><input id="themeBackground" type="color" value="#f4f7fb"></div>' +
-      '<div class="form-group"><label for="themeAccent">Основной цвет кнопок</label><input id="themeAccent" type="color" value="#007aff"></div>' +
-      '<div class="form-group"><label for="themeHover">Цвет кнопки при наведении</label><input id="themeHover" type="color" value="#0066d6"></div>' +
-      '<div class="form-group"><label for="themeCard">Фон карточек</label><input id="themeCard" type="color" value="#ffffff"></div></div>' +
-      '<div class="ops-actions" style="margin-top:14px"><button class="btn btn-cyan" type="button" id="themeApply">Применить оформление</button><button class="btn btn-outline" type="button" id="themeReset">Вернуть исходный дизайн</button></div></div>';
-    el('themeApply').onclick = themeFromInputs;
+    var palette = [
+      ['Белый','#ffffff'],['Слоновая кость','#fff4df'],['Песочный','#dfc7a0'],['Жёлтый','#ffd43b'],
+      ['Оранжевый','#ff922b'],['Коралловый','#ff6b6b'],['Красный','#e03131'],['Розовый','#f06595'],
+      ['Фуксия','#c2255c'],['Сиреневый','#b197fc'],['Фиолетовый','#7950f2'],['Индиго','#4c6ef5'],
+      ['Синий','#228be6'],['Голубой','#74c0fc'],['Бирюзовый','#20c997'],['Мятный','#96f2d7'],
+      ['Зелёный','#40c057'],['Лаймовый','#a9e34b'],['Оливковый','#808000'],['Коричневый','#8d5524'],
+      ['Серый','#adb5bd'],['Графитовый','#495057'],['Тёмно-синий','#182848'],['Чёрный','#212529']
+    ];
+    function paletteHtml(key, title) {
+      return '<div class="form-group"><label>' + title + '</label><div class="ticket-color-palette" role="group" aria-label="' + title + '">' +
+        palette.map(function (p) { return '<button type="button" class="ticket-color-swatch" data-theme-key="' + key + '" data-color="' + p[1] + '" title="' + p[0] + '" aria-label="' + p[0] + '" style="--swatch:' + p[1] + '"></button>'; }).join('') +
+        '</div></div>';
+    }
+    host.innerHTML = '<style>.ticket-color-palette{display:grid;grid-template-columns:repeat(8,minmax(24px,1fr));gap:8px;margin-top:8px}.ticket-color-swatch{height:30px;min-width:24px;border-radius:9px;border:2px solid rgba(100,116,139,.35);background:var(--swatch);cursor:pointer;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);transition:transform .12s,border-color .12s,box-shadow .12s}.ticket-color-swatch:hover{transform:scale(1.12);border-color:#111827;box-shadow:0 2px 8px #0002}.ticket-color-swatch.is-picked{outline:3px solid var(--accent-cyan);outline-offset:2px}.ticket-color-swatch[aria-label="Белый"]{border-color:#adb5bd}@media(max-width:520px){.ticket-color-palette{grid-template-columns:repeat(6,minmax(24px,1fr))}}</style>' +
+      '<div class="card"><div class="card-title">🎨 Настройка оформления</div><p style="color:var(--text-secondary);margin-bottom:14px">Просто наведи курсор на цвет, чтобы увидеть его название, и нажми на понравившийся квадратик. Цвет применяется сразу — вводить коды не нужно.</p>' +
+      paletteHtml('background','Фон сайта') + paletteHtml('accent','Основной цвет кнопок') + paletteHtml('hover','Цвет кнопок при наведении') + paletteHtml('card','Фон карточек') +
+      '<div class="ops-actions" style="margin-top:14px"><button class="btn btn-outline" type="button" id="themeReset">Вернуть исходный дизайн</button></div></div>';
+    host.querySelectorAll('[data-theme-key]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        chooseThemeColor(button.getAttribute('data-theme-key'), button.getAttribute('data-color'));
+      });
+    });
     el('themeReset').onclick = function () { setTheme(defaults); };
-    ['themeBackground','themeAccent','themeHover','themeCard'].forEach(function (id) { el(id).addEventListener('change', themeFromInputs); });
+    var current = Object.assign({}, defaults, read(THEME_KEY, {}));
+    ['background','accent','hover','card'].forEach(function (key) {
+      host.querySelectorAll('[data-theme-key="' + key + '"]').forEach(function (b) {
+        var picked = b.getAttribute('data-color') === current[key];
+        b.classList.toggle('is-picked', picked);
+        b.setAttribute('aria-pressed', picked ? 'true' : 'false');
+      });
+    });
   }
   function init() {
     mountDesign(); renderBuffet(); renderTheme();
