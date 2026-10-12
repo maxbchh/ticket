@@ -1176,4 +1176,75 @@ window.addEventListener('load',()=>{const saved=JSON.parse(localStorage.getItem(
   });
 })();
 </script>
+
+<script id="driver-shift-route-lock-fix">
+(function(){
+  function activeShift(){return state.driverShift&&state.driverShift.active?state.driverShift:null}
+  function applyShiftRouteLock(){
+    const s=activeShift(),transport=document.getElementById('transportType'),route=document.getElementById('routeSelect');
+    if(!transport||!route)return;
+    if(s){
+      transport.value=s.transport;
+      transport.disabled=true;
+      const r=(state.routes||[]).find(x=>String(x.id)===String(s.routeId));
+      route.innerHTML='';
+      if(r)route.appendChild(new Option(r.name||r.route||'Маршрут смены',String(r.id)));
+      route.value=String(s.routeId);
+      route.disabled=true;
+      if(typeof window.onRouteSelect==='function')window.onRouteSelect();
+    }else{
+      transport.disabled=false;route.disabled=false;
+      if(typeof window.onTransportTypeChange==='function')window.onTransportTypeChange();
+    }
+  }
+  const previousStart=window.startDriverShift;
+  window.startDriverShift=function(){
+    if(typeof previousStart==='function')previousStart();
+    if(activeShift())applyShiftRouteLock();
+  };
+  const previousFinish=window.finishDriverShift;
+  window.finishDriverShift=function(){
+    if(typeof previousFinish==='function')previousFinish();
+    if(!activeShift())applyShiftRouteLock();
+  };
+  const previousNext=window.nextStop;
+  window.nextStop=function(){
+    const s=activeShift();
+    if(s){
+      const r=(state.routes||[]).find(x=>String(x.id)===String(s.routeId));
+      if(!r||String(document.getElementById('routeSelect')?.value)!==String(s.routeId)){
+        applyShiftRouteLock();return;
+      }
+      if(typeof window.driverNextStop==='function')window.driverNextStop();
+      const current=activeShift();
+      if(current){
+        const f=document.getElementById('stationFrom'),t=document.getElementById('stationTo');
+        if(f){f.value=String(current.index);f.dispatchEvent(new Event('change',{bubbles:true}));}
+        if(t&&Number(t.value)<=current.index)t.value=String(Math.min(current.index+1,current.stops.length-1));
+        if(typeof window.recalculatePrice==='function')window.recalculatePrice();
+        if(typeof window.renderStops==='function')window.renderStops();
+      }
+      return;
+    }
+    if(typeof previousNext==='function')previousNext();
+  };
+  const previousTransportChange=window.onTransportTypeChange;
+  window.onTransportTypeChange=function(){
+    const s=activeShift();
+    if(s){applyShiftRouteLock();return}
+    if(typeof previousTransportChange==='function')previousTransportChange();
+  };
+  const previousRouteSelect=window.onRouteSelect;
+  window.onRouteSelect=function(){
+    const s=activeShift();
+    if(s){
+      const route=document.getElementById('routeSelect');
+      if(route&&String(route.value)!==String(s.routeId)){applyShiftRouteLock();return}
+    }
+    if(typeof previousRouteSelect==='function')previousRouteSelect();
+    if(activeShift())applyShiftRouteLock();
+  };
+  window.addEventListener('load',()=>setTimeout(applyShiftRouteLock,250));
+})();
+</script>
 </body></html>
