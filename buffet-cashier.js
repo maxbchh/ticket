@@ -82,12 +82,13 @@
 
   window.confirmCashPayment = function () {
     if (!context) return typeof originalConfirm === 'function' ? originalConfirm() : undefined;
-    if (!window.state || !window.state.shiftActive) {
-      alert('Сначала откройте кассовую смену.');
+    if (!(typeof state !== 'undefined' && state && state.shiftActive) && localStorage.getItem('conductor_shift_active') !== 'true') {
+      alert('Сначала откройте кассовую смену во вкладке «Журнал & Z-Отчёт».');
       return;
     }
     var received = Math.max(0, Number(get('cashReceivedInput') && get('cashReceivedInput').value || 0));
     var method = window.__cashPaymentMethod === 'card' ? 'card' : 'cash';
+    if (method === 'card') received = context.total;
     if (method === 'cash' && received < context.total) {
       alert('Недостаточно денег для оплаты покупки.');
       return;
@@ -99,8 +100,6 @@
     try {
       window.completeBuffetPayment(context.items, method, context.total);
       window.closeCashRegister();
-      var msg = get('cashRegisterMessage');
-      if (msg) msg.textContent = 'Покупка оплачена и записана в журнал операций.';
     } catch (error) {
       alert(error && error.message ? error.message : 'Не удалось оформить продажу. Проверь остатки товаров.');
     }
