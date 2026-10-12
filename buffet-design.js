@@ -3,6 +3,7 @@
   'use strict';
   var PRODUCTS_KEY = 'ticket_excursion_buffet_products_v1';
   var SALES_KEY = 'ticket_excursion_buffet_sales_v1';
+  var CART_KEY = 'ticket_excursion_buffet_cart_v1';
   var THEME_KEY = 'ticket_visual_theme_v1';
   var defaults = { background: '#f4f7fb', accent: '#007aff', hover: '#0066d6', card: '#ffffff' };
   function el(id) { return document.getElementById(id); }
@@ -52,6 +53,9 @@
   }
   function products() { return read(PRODUCTS_KEY, []); }
   function sales() { return read(SALES_KEY, []); }
+  function cart() { return read(CART_KEY, []); }
+  function cartItems() { var list=products(), basket=cart(); return basket.map(function (entry) { var p=list.find(function (x) { return x.id===entry.productId; }); return p ? {productId:p.id,name:p.name,price:Number(p.price),quantity:Math.max(1,Math.floor(Number(entry.quantity)||1)),stock:Number(p.stock)||0} : null; }).filter(Boolean); }
+  function cartTotal(items) { return Math.round(items.reduce(function (sum, item) { return sum+item.price*item.quantity; },0)*100)/100; }
   function saveProducts(items) { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(items)); renderBuffet(); }
   function renderBuffet() {
     var host = el('buffetApp');
@@ -66,10 +70,14 @@
       '<div class="form-group"><label for="buffetStock">Начальный остаток</label><input id="buffetStock" type="number" min="0" step="1" value="0"></div></div>' +
       '<div class="ops-actions" style="margin-top:12px"><button class="btn btn-cyan" type="button" id="buffetAdd">＋ Добавить товар</button><button class="btn btn-outline" type="button" id="buffetExport">📥 Выгрузить продажи CSV</button></div></div>' +
       '<div class="card"><div class="card-title">📦 Товары и остатки</div>' +
-      (items.length ? '<div class="table-responsive"><table><thead><tr><th>Товар</th><th>Цена</th><th>Остаток</th><th>Продать</th><th></th></tr></thead><tbody>' +
-        items.map(function (p) { return '<tr><td>' + escapeHtml(p.name) + '</td><td>' + money(p.price) + '</td><td>' + Number(p.stock || 0) + '</td><td><button class="btn btn-cyan" type="button" data-buffet-sell="' + escapeHtml(p.id) + '" ' + (Number(p.stock) < 1 ? 'disabled' : '') + '>Продать 1</button></td><td><button class="btn btn-outline" type="button" data-buffet-delete="' + escapeHtml(p.id) + '">Удалить</button></td></tr>'; }).join('') +
+      (items.length ? '<div class="table-responsive"><table><thead><tr><th>Товар</th><th>Цена</th><th>Остаток</th><th>Количество</th><th>Покупка</th><th></th></tr></thead><tbody>' +
+        items.map(function (p) { return '<tr><td>' + escapeHtml(p.name) + '</td><td>' + money(p.price) + '</td><td>' + Number(p.stock || 0) + '</td><td><input type="number" min="1" max="' + Number(p.stock||0) + '" step="1" value="1" aria-label="Количество ' + escapeHtml(p.name) + '" data-buffet-qty="' + escapeHtml(p.id) + '" style="width:78px" ' + (Number(p.stock)<1?'disabled':'') + '></td><td><button class="btn btn-cyan" type="button" data-buffet-add-cart="' + escapeHtml(p.id) + '" ' + (Number(p.stock) < 1 ? 'disabled' : '') + '>＋ В покупку</button></td><td><button class="btn btn-outline" type="button" data-buffet-delete="' + escapeHtml(p.id) + '">Удалить</button></td></tr>'; }).join('') +
         '</tbody></table></div>' : '<p style="color:var(--text-secondary)">Товаров пока нет. Добавь первый товар выше.</p>') +
-      '</div><div class="card"><div class="card-title">🧾 Продажи буфета</div><div class="feature-grid"><div class="feature-stat">Продано позиций<b>' + history.reduce(function (n, s) { return n + Number(s.quantity || 1); }, 0) + '</b></div><div class="feature-stat">Выручка буфета<b>' + money(total) + '</b></div></div>' +
+      '</div><div class="card"><div class="card-title">🛒 Текущая покупка</div>' +
+      (cartItems().length ? '<div class="table-responsive"><table><thead><tr><th>Товар</th><th>Цена</th><th>Количество</th><th>Сумма</th><th></th></tr></thead><tbody>' +
+        cartItems().map(function (item) { return '<tr><td>' + escapeHtml(item.name) + '</td><td>' + money(item.price) + '</td><td>' + item.quantity + '</td><td>' + money(item.price*item.quantity) + '</td><td><button class="btn btn-outline" type="button" data-buffet-remove-cart="' + escapeHtml(item.productId) + '">Убрать</button></td></tr>'; }).join('') +
+        '</tbody></table></div><div class="cash-register-total" style="margin:12px 0">Итого: ' + money(cartTotal(cartItems())) + '</div><div class="ops-actions"><button class="btn btn-green" type="button" id="buffetCheckout">💳 Перейти к оплате</button><button class="btn btn-outline" type="button" id="buffetClearCart">Очистить покупку</button></div>' :
+        '<p style="color:var(--text-secondary)">Выбери товары выше и нажми «В покупку».</p>') + '</div><div class="card"><div class="card-title">🧾 Продажи буфета</div><div class="feature-grid"><div class="feature-stat">Продано позиций<b>' + history.reduce(function (n, s) { return n + Number(s.quantity || 1); }, 0) + '</b></div><div class="feature-stat">Выручка буфета<b>' + money(total) + '</b></div></div>' +
       (history.length ? '<div class="table-responsive" style="margin-top:12px"><table><thead><tr><th>Время</th><th>Товар</th><th>Количество</th><th>Сумма</th></tr></thead><tbody>' + history.slice().reverse().slice(0,100).map(function (s) { return '<tr><td>' + escapeHtml(s.time) + '</td><td>' + escapeHtml(s.name) + '</td><td>' + Number(s.quantity || 1) + '</td><td>' + money(s.total) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p style="color:var(--text-secondary);margin-top:10px">Продаж пока нет.</p>') +
       '<div class="ops-actions" style="margin-top:12px"><button class="btn btn-outline" type="button" id="buffetClearSales">Очистить историю продаж</button></div></div>';
     el('buffetAdd').onclick = function () {
@@ -78,15 +86,30 @@
       var list = products(); list.push({ id: 'buffet_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), name: name, price: Math.round(price * 100) / 100, stock: stock, createdAt: new Date().toISOString() });
       saveProducts(list);
     };
-    host.querySelectorAll('[data-buffet-sell]').forEach(function (button) {
+    host.querySelectorAll('[data-buffet-add-cart]').forEach(function (button) {
       button.onclick = function () {
-        var id = button.getAttribute('data-buffet-sell'), list = products(), p = list.find(function (x) { return x.id === id; });
-        if (!p || Number(p.stock) < 1) return;
-        p.stock = Number(p.stock) - 1; localStorage.setItem(PRODUCTS_KEY, JSON.stringify(list));
-        var log = sales(); log.push({ id: 'sale_' + Date.now(), time: new Date().toLocaleString('ru-RU'), productId: p.id, name: p.name, quantity: 1, total: Number(p.price) });
-        localStorage.setItem(SALES_KEY, JSON.stringify(log)); renderBuffet();
+        var id=button.getAttribute('data-buffet-add-cart'), p=products().find(function (x) { return x.id===id; });
+        var input=host.querySelector('[data-buffet-qty="' + id + '"]'), qty=Math.floor(Number(input && input.value || 1));
+        if(!p || qty<1 || qty>Number(p.stock||0)){alert('Проверь количество: оно должно быть от 1 до остатка товара.');return;}
+        var basket=cart(), existing=basket.find(function (x) { return x.productId===id; });
+        var already=existing?Number(existing.quantity)||0:0;
+        if(already+qty>Number(p.stock||0)){alert('В покупке уже есть этот товар. Превышен доступный остаток.');return;}
+        if(existing)existing.quantity=already+qty;else basket.push({productId:id,quantity:qty});
+        localStorage.setItem(CART_KEY,JSON.stringify(basket));renderBuffet();
       };
     });
+    host.querySelectorAll('[data-buffet-remove-cart]').forEach(function (button) {
+      button.onclick=function(){localStorage.setItem(CART_KEY,JSON.stringify(cart().filter(function(x){return x.productId!==button.getAttribute('data-buffet-remove-cart');})));renderBuffet();};
+    });
+    var checkout=el('buffetCheckout');
+    if(checkout)checkout.onclick=function(){
+      var items=cartItems();
+      if(!items.length)return;
+      if(!window.openBuffetCashRegister){alert('Касса ещё загружается. Обнови страницу и попробуй снова.');return;}
+      window.openBuffetCashRegister(cartTotal(items),items);
+    };
+    var clearCart=el('buffetClearCart');
+    if(clearCart)clearCart.onclick=function(){if(confirm('Очистить текущую покупку?')){localStorage.setItem(CART_KEY,'[]');renderBuffet();}};
     host.querySelectorAll('[data-buffet-delete]').forEach(function (button) {
       button.onclick = function () {
         var p = products().find(function (x) { return x.id === button.getAttribute('data-buffet-delete'); });
@@ -104,6 +127,28 @@
       var a = document.createElement('a'); a.href = url; a.download = 'prodazhi-bufeta.csv'; a.click(); URL.revokeObjectURL(url);
     };
   }
+  window.completeBuffetPayment = function (items, method, total) {
+    var list=products(), basketSales=sales();
+    items.forEach(function (item) {
+      var p=list.find(function (x) { return x.id===item.productId; });
+      if(!p || Number(p.stock)<Number(item.quantity)) throw new Error('Недостаточный остаток товара: '+item.name);
+    });
+    var now=new Date().toLocaleString('ru-RU');
+    items.forEach(function (item) {
+      var p=list.find(function (x) { return x.id===item.productId; });
+      p.stock=Number(p.stock)-Number(item.quantity);
+      basketSales.push({id:'sale_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),time:now,productId:p.id,name:p.name,quantity:Number(item.quantity),total:Math.round(Number(item.price)*Number(item.quantity)*100)/100,paymentMethod:method});
+    });
+    localStorage.setItem(PRODUCTS_KEY,JSON.stringify(list));
+    localStorage.setItem(SALES_KEY,JSON.stringify(basketSales));
+    localStorage.setItem(CART_KEY,'[]');
+    if(typeof window.addOperation==='function') {
+      window.addOperation('Продажа буфета',items.map(function(x){return x.name+' × '+x.quantity;}).join(', '),Number(total),'Мини-буфет · '+(method==='card'?'Карта':'Наличные'));
+    } else {
+      var ops=read('conductor_operations',[]);ops.push({time:now,type:'Продажа буфета',ticket:items.map(function(x){return x.name+' × '+x.quantity;}).join(', '),amount:Number(total),conductor:read('conductor_name','Кондуктор'),details:'Мини-буфет · '+(method==='card'?'Карта':'Наличные')});localStorage.setItem('conductor_operations',JSON.stringify(ops));
+    }
+    renderBuffet();
+  };
   function mountDesign() {
     var host = el('designApp');
     if (!host) return;
