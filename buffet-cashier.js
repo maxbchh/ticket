@@ -61,7 +61,11 @@
       alert('В покупке нет товаров или сумма некорректна.');
       return;
     }
-    if (localStorage.getItem('conductor_shift_active') !== 'true') {
+    // The main terminal state and localStorage can briefly differ after shift wrappers/cloud sync.
+    // Treat the shift as open if either authoritative indicator says it is open.
+    var shiftIsOpen = (typeof state !== 'undefined' && state && state.shiftActive === true) ||
+      localStorage.getItem('conductor_shift_active') === 'true';
+    if (!shiftIsOpen) {
       alert('Сначала откройте кассовую смену во вкладке «Журнал & Z-Отчёт».');
       return;
     }
