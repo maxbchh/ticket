@@ -113,7 +113,7 @@ body{overflow-x:hidden}
 </div>
 <div class="shift-time-grid">
 <div class="shift-time-card"><span>По графику</span><strong id="runPlannedTime">—</strong></div>
-<div class="shift-time-card"><span>Фактически</span><strong id="runActualTime">—</strong></div>
+<div class="shift-time-card"><span>Отправление факт.</span><strong id="runActualTime">—</strong></div>
 <div class="shift-time-card"><span>Опоздание</span><strong id="runDelay">—</strong></div>
 </div>
 <div id="runNextInfo" class="feature-stat" style="margin-top:10px"></div>
@@ -123,7 +123,7 @@ body{overflow-x:hidden}
 </div>
 <div class="card">
 <div class="card-title">📋 График остановок</div>
-<div class="table-responsive"><table><thead><tr><th>№</th><th>Остановка</th><th>По графику</th><th>Факт.</th><th>Опоздание</th></tr></thead><tbody id="shiftScheduleBody"></tbody></table></div>
+<div class="table-responsive"><table><thead><tr><th>№</th><th>Остановка</th><th>По графику</th><th>Отправление факт.</th><th>Опоздание</th></tr></thead><tbody id="shiftScheduleBody"></tbody></table></div>
 </div>
 </div><div id="tab-settings" class="tab-content"><div class="card"><div class="card-title">☁️ Общая база данных</div><p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:12px">Данные сохраняются в Supabase и доступны после открытия терминала на другом устройстве.</p><div class="ops-actions"><button class="btn btn-cyan" onclick="syncConductorData()">☁️ Синхронизировать сейчас</button><button class="btn btn-outline" onclick="downloadConductorBackup()">💾 Резервная копия</button></div></div><div class="card"><div class="card-title">Настройки Билета и Печати</div><div class="form-grid"><div class="form-group"><label>Название Организации / Перевозчика</label><input type="text" id="orgName" placeholder="Детская Узкоколейная ЖД" oninput="saveSettings();updatePreview()"></div><div class="form-group"><label>Ширина Бумаги Термопринтера</label><select id="paperWidthSelect" onchange="changePaperWidth()"><option value="58mm">58 мм</option><option value="80mm">80 мм</option></select></div></div><div class="form-group"><label>Текст внизу билета</label><input type="text" id="ticketFooter" placeholder="Счастливого пути!" oninput="saveSettings();updatePreview()"></div><div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px"><button class="btn btn-outline" onclick="exportDataJSON()">📥 Экспорт Настроек в JSON</button><label class="btn btn-outline">📤 Импорт Настроек из JSON<input type="file" id="importJsonInput" accept=".json" style="display:none" onchange="importDataJSON(event)"></label><button class="btn btn-red" onclick="resetToDefaults()">🔄 Сбросить Все Данные</button></div></div></div></div>
 <div class="right-column"><div class="preview-sticky"><div class="card ticket-wrapper"><div class="card-title" style="width:100%"><span>📄 Чек (Компактный)</span></div><div class="ticket-paper" id="ticketPreview"></div><div style="width:100%;display:flex;flex-direction:column;gap:8px"><button class="btn btn-cyan btn-block" onclick="copyTicketText()">📋 Скопировать Текст</button><button class="btn btn-outline btn-block" onclick="printTicket()">🖨️ Напечатать чек</button></div></div></div></div></div>
@@ -846,7 +846,7 @@ function updateRouteInfo(){
 function renderTable(){
  const s=current(),body=$('shiftScheduleBody');if(!body)return;
  if(!s){body.innerHTML='<tr><td colspan="5">Смена ещё не начата.</td></tr>';return}
- body.innerHTML=s.stops.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+x.name+'</td><td>'+x.planned+'</td><td>'+(x.actual||'—')+'</td><td>'+(x.delay==null?'—':(x.delay>0?'+':'')+x.delay+' мин')+'</td></tr>').join('');
+ body.innerHTML=s.stops.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+x.name+'</td><td>'+x.planned+'</td><td>'+(x.departureActual||x.actual||'—')+'</td><td>'+(x.delay==null?'—':(x.delay>0?'+':'')+x.delay+' мин')+'</td></tr>').join('');
 }
 function render(){
  const s=current(),status=$('driverShiftStatus'),setup=$('driverShiftSetup'),run=$('driverShiftRun');
@@ -877,7 +877,7 @@ window.startDriverShift=function(){
 }
 window.driverNextStop=function(){
  const s=current();if(!s)return;
- const clock=gameClockNow(s),now=clock.date,x=s.stops[s.index];x.actual=fmtTime(now);
+ const clock=gameClockNow(s),now=clock.date,x=s.stops[s.index];x.departureActual=fmtTime(now);x.actual=x.departureActual;
  const planned=parseMinutes(x.planned),actual=clock.minutes;
  let d=actual-planned;if(d>720)d-=1440;if(d<-720)d+=1440;x.delay=d;
  if(s.index>=s.stops.length-1){render();return}
@@ -885,7 +885,7 @@ window.driverNextStop=function(){
 }
 window.finishDriverShift=function(){
  const s=current();if(!s)return;
- const x=s.stops[s.index];if(!x.actual){const clock=gameClockNow(s),now=clock.date;x.actual=fmtTime(now);let d=clock.minutes-parseMinutes(x.planned);if(d>720)d-=1440;if(d<-720)d+=1440;x.delay=d}
+ const x=s.stops[s.index];if(!x.actual){const clock=gameClockNow(s),now=clock.date;x.departureActual=fmtTime(now);x.actual=x.departureActual;let d=clock.minutes-parseMinutes(x.planned);if(d>720)d-=1440;if(d<-720)d+=1440;x.delay=d}
  s.active=false;s.finishedAt=new Date().toISOString();state.driverShift=s;save();
  state.currentTripId=null;localStorage.removeItem('conductor_current_trip_id');localStorage.removeItem('conductor_current_trip_route');
  render();
