@@ -1191,7 +1191,7 @@ window.addEventListener('load',()=>{const saved=JSON.parse(localStorage.getItem(
       if(r)route.appendChild(new Option(r.name||r.route||'Маршрут смены',String(r.id)));
       route.value=String(s.routeId);
       route.disabled=true;
-      if(typeof window.onRouteSelect==='function')window.onRouteSelect();
+      if(typeof previousRouteSelect==='function')previousRouteSelect();
     }else{
       transport.disabled=false;route.disabled=false;
       if(typeof window.onTransportTypeChange==='function')window.onTransportTypeChange();
