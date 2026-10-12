@@ -1,5 +1,5 @@
-const CACHE_NAME = "ticket-pwa-v13";
-const APP_SHELL = ["./", "./index.html", "./manifest.webmanifest", "./cloud-sync.js", "./cash-fix.js", "./qr-sales.js", "./qr-pay.html", "./route-payment-qr.js", "./buffet-design.js", "./shift-sync.js"];
+const CACHE_NAME = "ticket-pwa-v14";
+const APP_SHELL = ["./", "./index.html", "./manifest.webmanifest", "./cloud-sync.js", "./cash-fix.js", "./qr-sales.js", "./qr-pay.html", "./route-payment-qr.js", "./buffet-design.js", "./buffet-cashier.js", "./shift-sync.js"];
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
