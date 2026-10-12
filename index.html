@@ -405,7 +405,7 @@ function refundBatch(){
 (function(){
   const STOP_KEY='conductor_trip_stop_state';
   const TRIP_KEY='conductor_current_trip_id';
-  function route(){return state.routes.find(r=>r.id===document.getElementById('routeSelect')?.value)}
+  function route(){const id=document.getElementById('routeSelect')?.value;return (state.routes||[]).find(r=>String(r.id)===String(id))}
   function saveStop(){localStorage.setItem(STOP_KEY,JSON.stringify(state.tripStop||{})); if(state.currentTripId)localStorage.setItem(TRIP_KEY,state.currentTripId)}
   function ensureTrip(r,forceNew=false){
     if(!r)return null;
