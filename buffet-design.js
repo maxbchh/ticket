@@ -56,7 +56,7 @@
   function cart() { return read(CART_KEY, []); }
   function cartItems() { var list=products(), basket=cart(); return basket.map(function (entry) { var p=list.find(function (x) { return x.id===entry.productId; }); return p ? {productId:p.id,name:p.name,price:Number(p.price),quantity:Math.max(1,Math.floor(Number(entry.quantity)||1)),stock:Number(p.stock)||0} : null; }).filter(Boolean); }
   function cartTotal(items) { return Math.round(items.reduce(function (sum, item) { return sum+item.price*item.quantity; },0)*100)/100; }
-  function saveProducts(items) { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(items)); renderBuffet(); }
+  function saveProducts(items) { var stamp=new Date().toISOString(); items.forEach(function(p){p.updatedAt=stamp;}); localStorage.setItem(PRODUCTS_KEY, JSON.stringify(items)); renderBuffet(); }
   function renderBuffet() {
     var host = el('buffetApp');
     if (!host) return;
