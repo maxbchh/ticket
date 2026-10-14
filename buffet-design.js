@@ -136,7 +136,7 @@
     var now=new Date().toLocaleString('ru-RU');
     items.forEach(function (item) {
       var p=list.find(function (x) { return x.id===item.productId; });
-      p.stock=Number(p.stock)-Number(item.quantity);
+      p.stock=Number(p.stock)-Number(item.quantity);p.updatedAt=new Date().toISOString();
       basketSales.push({id:'sale_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),time:now,productId:p.id,name:p.name,quantity:Number(item.quantity),total:Math.round(Number(item.price)*Number(item.quantity)*100)/100,paymentMethod:method});
     });
     localStorage.setItem(PRODUCTS_KEY,JSON.stringify(list));
