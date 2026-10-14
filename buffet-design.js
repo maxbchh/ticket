@@ -70,8 +70,8 @@
       '<div class="form-group"><label for="buffetStock">Начальный остаток</label><input id="buffetStock" type="number" min="0" step="1" value="0"></div></div>' +
       '<div class="ops-actions" style="margin-top:12px"><button class="btn btn-cyan" type="button" id="buffetAdd">＋ Добавить товар</button><button class="btn btn-outline" type="button" id="buffetExport">📥 Выгрузить продажи CSV</button></div></div>' +
       '<div class="card"><div class="card-title">📦 Товары и остатки</div>' +
-      (items.length ? '<div class="table-responsive"><table><thead><tr><th>Товар</th><th>Цена</th><th>Остаток</th><th>Количество</th><th>Покупка</th><th></th></tr></thead><tbody>' +
-        items.map(function (p) { return '<tr><td>' + escapeHtml(p.name) + '</td><td>' + money(p.price) + '</td><td>' + Number(p.stock || 0) + '</td><td><input type="number" min="1" max="' + Number(p.stock||0) + '" step="1" value="1" aria-label="Количество ' + escapeHtml(p.name) + '" data-buffet-qty="' + escapeHtml(p.id) + '" style="width:78px" ' + (Number(p.stock)<1?'disabled':'') + '></td><td><button class="btn btn-cyan" type="button" data-buffet-add-cart="' + escapeHtml(p.id) + '" ' + (Number(p.stock) < 1 ? 'disabled' : '') + '>＋ В покупку</button></td><td><button class="btn btn-outline" type="button" data-buffet-delete="' + escapeHtml(p.id) + '">Удалить</button></td></tr>'; }).join('') +
+      (items.length ? '<div class="table-responsive"><table><thead><tr><th>Товар</th><th>Цена</th><th>Остаток</th><th>Приход</th><th>Количество</th><th>Покупка</th><th></th></tr></thead><tbody>' +
+        items.map(function (p) { return '<tr><td>' + escapeHtml(p.name) + '</td><td>' + money(p.price) + '</td><td>' + Number(p.stock || 0) + '</td><td><div style="display:flex;gap:5px;align-items:center"><input type="number" min="1" step="1" value="1" aria-label="Приход товара ' + escapeHtml(p.name) + '" data-buffet-restock-qty="' + escapeHtml(p.id) + '" style="width:68px"><button class="btn btn-outline" type="button" data-buffet-restock="' + escapeHtml(p.id) + '">＋</button></div></td><td><input type="number" min="1" max="' + Number(p.stock||0) + '" step="1" value="1" aria-label="Количество ' + escapeHtml(p.name) + '" data-buffet-qty="' + escapeHtml(p.id) + '" style="width:78px" ' + (Number(p.stock)<1?'disabled':'') + '></td><td><button class="btn btn-cyan" type="button" data-buffet-add-cart="' + escapeHtml(p.id) + '" ' + (Number(p.stock) < 1 ? 'disabled' : '') + '>＋ В покупку</button></td><td><button class="btn btn-outline" type="button" data-buffet-delete="' + escapeHtml(p.id) + '">Удалить</button></td></tr>'; }).join('') +
         '</tbody></table></div>' : '<p style="color:var(--text-secondary)">Товаров пока нет. Добавь первый товар выше.</p>') +
       '</div><div class="card"><div class="card-title">🛒 Текущая покупка</div>' +
       (cartItems().length ? '<div class="table-responsive"><table><thead><tr><th>Товар</th><th>Цена</th><th>Количество</th><th>Сумма</th><th></th></tr></thead><tbody>' +
@@ -79,12 +79,33 @@
         '</tbody></table></div><div class="cash-register-total" style="margin:12px 0">Итого: ' + money(cartTotal(cartItems())) + '</div><div class="ops-actions"><button class="btn btn-green" type="button" id="buffetCheckout">💳 Перейти к оплате</button><button class="btn btn-outline" type="button" id="buffetClearCart">Очистить покупку</button></div>' :
         '<p style="color:var(--text-secondary)">Выбери товары выше и нажми «В покупку».</p>') + '</div><div class="card"><div class="card-title">🧾 Продажи буфета</div><div class="feature-grid"><div class="feature-stat">Продано позиций<b>' + history.reduce(function (n, s) { return n + Number(s.quantity || 1); }, 0) + '</b></div><div class="feature-stat">Выручка буфета<b>' + money(total) + '</b></div></div>' +
       (history.length ? '<div class="table-responsive" style="margin-top:12px"><table><thead><tr><th>Время</th><th>Товар</th><th>Количество</th><th>Сумма</th></tr></thead><tbody>' + history.slice().reverse().slice(0,100).map(function (s) { return '<tr><td>' + escapeHtml(s.time) + '</td><td>' + escapeHtml(s.name) + '</td><td>' + Number(s.quantity || 1) + '</td><td>' + money(s.total) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p style="color:var(--text-secondary);margin-top:10px">Продаж пока нет.</p>') +
-      '<div class="ops-actions" style="margin-top:12px"><button class="btn btn-outline" type="button" id="buffetClearSales">Очистить историю продаж</button></div></div>';
+      '<div class="ops-actions" style="margin-top:12px"><button class="btn btn-outline" type="button" id="buffetClearSales">Очистить историю продаж</button></div></div>' +
+      (read('ticket_excursion_buffet_last_receipt_v1', null) ? '<div class="card"><div class="card-title">🧾 Последний чек буфета</div><pre id="buffetReceiptText" style="font:11px/1.2 Courier New,monospace;white-space:pre-wrap;background:#fff;color:#000;padding:8px;max-width:58mm">' + escapeHtml(read('ticket_excursion_buffet_last_receipt_v1', null).text || '') + '</pre><button class="btn btn-cyan" type="button" id="buffetPrintReceipt">🖨️ Напечатать чек буфета</button></div>' : '');
     el('buffetAdd').onclick = function () {
       var name = el('buffetName').value.trim(), price = Number(el('buffetPrice').value), stock = Number(el('buffetStock').value);
       if (!name || !Number.isFinite(price) || price <= 0 || !Number.isInteger(stock) || stock < 0) { alert('Укажи название, цену больше нуля и целый остаток от 0.'); return; }
       var list = products(); list.push({ id: 'buffet_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), name: name, price: Math.round(price * 100) / 100, stock: stock, createdAt: new Date().toISOString() });
       saveProducts(list);
+    };
+    host.querySelectorAll('[data-buffet-restock]').forEach(function (button) {
+      button.onclick = function () {
+        var id=button.getAttribute('data-buffet-restock');
+        var input=host.querySelector('[data-buffet-restock-qty="' + id + '"]');
+        var qty=Math.floor(Number(input && input.value));
+        var list=products(), p=list.find(function(x){return x.id===id;});
+        if(!p || !Number.isInteger(qty) || qty<1){alert('Укажи количество привезённого товара: целое число больше нуля.');return;}
+        p.stock=Math.max(0,Number(p.stock)||0)+qty;
+        p.updatedAt=new Date().toISOString();
+        saveProducts(list);
+      };
+    });
+    var printBuffetReceipt=el('buffetPrintReceipt');
+    if(printBuffetReceipt) printBuffetReceipt.onclick=function(){
+      var receipt=read('ticket_excursion_buffet_last_receipt_v1',null);
+      if(!receipt || !receipt.text){alert('Чек буфета пока не сформирован.');return;}
+      document.body.classList.add('print-buffet-receipt');
+      window.print();
+      setTimeout(function(){document.body.classList.remove('print-buffet-receipt');},1000);
     };
     host.querySelectorAll('[data-buffet-add-cart]').forEach(function (button) {
       button.onclick = function () {
@@ -141,6 +162,13 @@
     });
     localStorage.setItem(PRODUCTS_KEY,JSON.stringify(list));
     localStorage.setItem(SALES_KEY,JSON.stringify(basketSales));
+    var receiptLines=['МИНИ-БУФЕТ','------------------------------'];
+    items.forEach(function(item){receiptLines.push(item.name);receiptLines.push('  '+Number(item.quantity)+' x '+Number(item.price).toFixed(2)+' = '+(Math.round(Number(item.quantity)*Number(item.price)*100)/100).toFixed(2)+' BYN');});
+    receiptLines.push('------------------------------');
+    receiptLines.push('ИТОГО: '+(Math.round(Number(total)*100)/100).toFixed(2)+' BYN');
+    receiptLines.push('Оплата: '+(method==='card'?'Карта':'Наличные'));
+    receiptLines.push(now);
+    localStorage.setItem('ticket_excursion_buffet_last_receipt_v1',JSON.stringify({text:receiptLines.join('\n'),createdAt:new Date().toISOString(),items:items.map(function(x){return {name:x.name,quantity:x.quantity,price:x.price};}),total:Number(total),paymentMethod:method}));
     localStorage.setItem(CART_KEY,'[]');
     if(typeof window.addOperation==='function') {
       window.addOperation('Продажа буфета',items.map(function(x){return x.name+' × '+x.quantity;}).join(', '),Number(total),'Мини-буфет · '+(method==='card'?'Карта':'Наличные'));
