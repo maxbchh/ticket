@@ -36,10 +36,13 @@ function refreshUI(){
  if(!route||!Array.isArray(route.stops)||route.stops.length<2){sel.innerHTML='<option value="">Маршрут не найден</option>';sel.disabled=true;$('buy').disabled=true;$('currentStop').textContent='В активной смене не найден маршрут. Попросите водителя проверить смену.';return;}
  fromIndex=Math.max(0,Math.min(Number(shift.index)||0,route.stops.length-1));
  $('currentStop').textContent='🚌 Маршрут: '+(route.name||route.route||'')+'\n🚏 Отправление: '+stopName(fromIndex)+'\nОстановка обновляется автоматически.';
+ // Не пересоздаём варианты, пока пассажир выбирает остановку: опрос общей базы идёт каждые 2,5 секунды и на iPhone иначе сбрасывает системный список.
+ if(document.activeElement===sel && sel.dataset.routeId===String(route.id) && Number(sel.dataset.fromIndex)===fromIndex){updateFare();return;}
  sel.innerHTML='';
  for(var i=fromIndex+1;i<route.stops.length;i++){var o=document.createElement('option');o.value=String(i);o.textContent=route.stops[i];sel.appendChild(o);}
  if(!sel.options.length){sel.innerHTML='<option value="">Конечная остановка достигнута</option>';sel.disabled=true;$('buy').disabled=true;$('price').textContent='— BYN';show('Автобус уже на последней остановке.',false);return;}
  sel.disabled=false;
+ sel.dataset.routeId=String(route.id);sel.dataset.fromIndex=String(fromIndex);
  if(old&&Number(old)>fromIndex&&Number(old)<route.stops.length)sel.value=old;
  else sel.selectedIndex=0;
  updateFare();
