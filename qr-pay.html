@@ -64,7 +64,9 @@ async function buy(){if(busy)return;if(!data||!route||fromIndex<0||toIndex<=from
  data.tickets=tickets.concat([ticket]);data.lastTicketNum=num+1;data.operations=Array.isArray(data.operations)?data.operations:[];data.operations.push({id:'op_'+req,time:now.toLocaleString('ru-RU'),type:'QR-билет по маршруту',ticket:num,amount:price,conductor:data.conductorName||'Кондуктор',details:(ticket.from+' → '+ticket.to+' · '+method),createdAt:iso});
  var save=await fetch(URL,{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id:'main',data:data,updated_at:iso})});
  if(!save.ok)throw Error('Не удалось записать билет в общую базу ('+save.status+').');
- $('destination').disabled=true;document.querySelectorAll('input[name="method"]').forEach(function(x){x.disabled=true;});$('price').textContent=money(price);$('buy').textContent='Билет №'+num+' оформлен';show('Билет оплачен и записан в общую базу.\n'+ticket.from+' → '+ticket.to+'\n'+money(price)+' · '+method+'\nНомер билета: '+num,true);
+ $('destination').disabled=true;document.querySelectorAll('input[name="method"]').forEach(function(x){x.disabled=true;});$('price').textContent=money(price);$('buy').textContent='Билет №'+num+' оформлен';show('Билет оформлен!\n'+ticket.from+' → '+ticket.to+'\n'+money(price)+' · '+method+'\nНомер билета: '+num,true);
+ // Показываем подтверждение 3 секунды, затем возвращаем форму для следующей покупки без повторного сканирования QR.
+ window.setTimeout(function(){busy=false;$('destination').disabled=false;document.querySelectorAll('input[name="method"]').forEach(function(x){x.disabled=false;});$('buy').textContent='Оплатить и получить билет';if($('destination').options.length>0){$('destination').selectedIndex=0;}updateFare();show('Можно купить следующий билет, не сканируя QR-код повторно.',true);},3000);
  }catch(e){show(e.message||'Не удалось оформить билет. Проверь связь и попробуй ещё раз.',false);busy=false;$('buy').disabled=false;}
 }
 $('destination').addEventListener('change',updateFare);$('buy').addEventListener('click',buy);
