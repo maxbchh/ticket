@@ -22,7 +22,7 @@ function getVehicle(){
  const type=s&&s.transport||$('transportType')?.value||'bus';
  const routeName=s&&s.routeName||route&&route.name||$('routeSelect')?.selectedOptions?.[0]?.text||'—';
  const model=s&&s.vehicle||$('shiftVehicleModel')?.value||'—';
- const vehicleNo=localStorage.getItem('conductor_vehicle_number')||'—';
+ const vehicleNo=s&&s.vehicleNumber||localStorage.getItem('conductor_vehicle_number')||'—';
  return {type:TYPES[type]||type,model,routeName,vehicleNo,shift:s};
 }
 function currentRecords(which){
@@ -44,7 +44,7 @@ function render(){
  ts.forEach(t=>{
   const qty=Math.max(1,Number(t.quantity||t.qty||1)),price=Number(t.total!=null?t.total:(Number(t.price||0)*qty));
   ticketRevenue+=price;ticketCount+=qty;
-  const kind=t.passengerType||t.passenger||t.category||'Билет';
+  const rawKind=t.passengerType||t.passenger||t.category||'Билет';const kind=({full:'Полный',lgt:'Льготный',child:'Школьный',luggage:'Багаж / животные'})[rawKind]||rawKind;
   const prev=byType.get(kind)||{qty:0,sum:0};prev.qty+=qty;prev.sum+=price;byType.set(kind,prev);
   const stop=String(t.to||t.destination||'Не указана');const st=byStop.get(stop)||{qty:0,sum:0};st.qty+=qty;st.sum+=price;byStop.set(stop,st);
   const method=t.paymentMethod==='card'?'card':'cash';byMethod[method]+=price;
@@ -60,7 +60,7 @@ function render(){
  const stamp='<div class="rp-line"></div><div class="rp-center rp-small">МЕСТО ДЛЯ ПЕЧАТИ ОРГАНИЗАЦИИ</div><div style="height:24px"></div>';
  host.innerHTML='<div id="ticketReportPaper">'+
  '<div class="rp-center"><b>ОТЧЁТ ПО '+(mode==='shift'?'СМЕНЕ':'ПОЕЗДКЕ')+'</b></div>'+
- '<div class="rp-transport">'+escape(v.type)+' · '+escape(v.model)+' · '+escape(v.routeName)+'</div>'+
+ '<div class="rp-transport">'+escape(v.type)+' №'+escape(v.vehicleNo)+' · '+escape(v.model)+' · '+escape(v.routeName)+'</div>'+
  '<div class="rp-line"></div>'+
  '<div>Смена: '+escape(new Date(started).toLocaleString('ru-RU'))+'</div>'+
  '<div>Печать: '+escape(printed)+' (игровое)</div>'+
