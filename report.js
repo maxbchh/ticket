@@ -15,7 +15,10 @@ function archiveCurrentShift(){
  const meta=read(KEY,null)||{};
  const id=meta.id||('shift_'+(driver.realStartedAt||Date.now()));
  if(existing.some(a=>a.id===id&&a.finishedAt))return existing.find(a=>a.id===id);
- const archive={id,startedAt:driver.startedAt||meta.startedAt||new Date().toISOString(),finishedAt:new Date().toISOString(),gameStartTime:driver.gameStartTime||meta.gameStartTime||'не задано',gameTimeAtFinish:nowGame(),vehicle:{type:driver.transport||'bus',vehicleNo:driver.vehicleNumber||localStorage.getItem('conductor_vehicle_number')||'—',model:driver.vehicle||'—',routeName:driver.routeName||'—'},tickets:tickets(),buffet:sales(),ops:operations(),driverShift:driver,conductorSurname:$('reportConductorSurname')?.value||'',driverSurname:$('reportDriverSurname')?.value||'',printedAt:null};
+ const cashShiftId=localStorage.getItem('conductor_current_shift_id');
+ const allTickets=tickets(),taggedTickets=allTickets.filter(t=>t.reportShiftId===id||(cashShiftId&&t.shiftId===cashShiftId));
+ const allSales=sales(),taggedSales=allSales.filter(s=>s.reportShiftId===id);
+ const archive={id,startedAt:driver.startedAt||meta.startedAt||new Date().toISOString(),finishedAt:new Date().toISOString(),gameStartTime:driver.gameStartTime||meta.gameStartTime||'не задано',gameTimeAtFinish:nowGame(),vehicle:{type:driver.transport||'bus',vehicleNo:driver.vehicleNumber||localStorage.getItem('conductor_vehicle_number')||'—',model:driver.vehicle||'—',routeName:driver.routeName||'—'},tickets:taggedTickets.length?taggedTickets:allTickets,buffet:taggedSales.length?taggedSales:allSales,ops:operations(),driverShift:driver,conductorSurname:$('reportConductorSurname')?.value||'',driverSurname:$('reportDriverSurname')?.value||'',printedAt:null};
  existing.push(archive);saveArchives(existing);selectedArchive=archive;return archive;
 }
 function selectArchive(id){if(!id){selectedArchive=null;mode='shift';render();return}const a=archives().find(x=>x.id===id);if(a){selectedArchive=a;mode='shift';render()}}
