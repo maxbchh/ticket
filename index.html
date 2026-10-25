@@ -107,7 +107,7 @@ body{overflow-x:hidden}
 <div id="driverShiftSetup">
 <div class="form-grid">
 <div class="form-group"><label>Вид транспорта на смену</label><select id="shiftTransportType"><option value="bus">Автобус</option><option value="trolley">Троллейбус</option><option value="tram">Трамвай</option><option value="minibus">Маршрутное такси</option><option value="uzd">Узкоколейная ЖД</option><option value="train">Железная дорога</option></select></div>
-<div class="form-group"><label>Модель / борт</label><input id="shiftVehicleModel" type="text" placeholder="Например: МАЗ-103.065"></div>
+<div class="form-group"><label>Номер автобуса / борта</label><input id="shiftVehicleNumber" type="text" placeholder="Например: 7042"></div><div class="form-group"><label>Модель / борт</label><input id="shiftVehicleModel" type="text" placeholder="Например: МАЗ-103.065"></div>
 <div class="form-group"><label>Маршрут</label><select id="shiftRouteSelect"></select></div>
 <div class="form-group"><label>Отправление</label><input id="shiftDepartureTime" type="time" value="11:00"></div>
 <div class="form-group"><label>Прибытие</label><input id="shiftArrivalTime" type="time" value="11:45"></div>
@@ -898,7 +898,7 @@ window.startDriverShift=function(){
  const vehicle=$('shiftVehicleModel').value.trim();if(!vehicle){alert('Укажите модель или борт автобуса.');return}
  if((r.stops||[]).length<2){alert('В маршруте должно быть минимум 2 остановки.');return}
  const dep=$('shiftDepartureTime').value,arr=$('shiftArrivalTime').value,gameStart=$('shiftGameStartTime')?.value||'07:00',times=buildTimes(r,dep,arr),realStartedAt=Date.now();
- state.driverShift={active:true,startedAt:new Date(realStartedAt).toISOString(),realStartedAt,gameStartTime:gameStart,transport:type,vehicle,routeId:r.id,routeName:routeLabel(r),departure:dep,arrival:arr,index:0,stops:r.stops.map((name,i)=>({name,planned:times[i],actual:null,delay:null}))};
+ state.driverShift={active:true,startedAt:new Date(realStartedAt).toISOString(),realStartedAt,gameStartTime:gameStart,transport:type,vehicleNumber:$('shiftVehicleNumber')?.value.trim()||'',vehicle,routeId:r.id,routeName:routeLabel(r),departure:dep,arrival:arr,index:0,stops:r.stops.map((name,i)=>({name,planned:times[i],actual:null,delay:null}))};
  state.currentTripId='trip_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
  localStorage.setItem('conductor_current_trip_id',state.currentTripId);localStorage.setItem('conductor_current_trip_route',String(r.id));
  state.tripStop={routeId:r.id,index:0};
