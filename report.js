@@ -21,6 +21,50 @@ function archiveCurrentShift(){
  const archive={id,startedAt:driver.startedAt||meta.startedAt||new Date().toISOString(),finishedAt:new Date().toISOString(),gameStartTime:driver.gameStartTime||meta.gameStartTime||'не задано',gameTimeAtFinish:nowGame(),vehicle:{type:driver.transport||'bus',vehicleNo:driver.vehicleNumber||localStorage.getItem('conductor_vehicle_number')||'—',model:driver.vehicle||'—',routeName:driver.routeName||'—'},tickets:taggedTickets.length?taggedTickets:allTickets,buffet:taggedSales.length?taggedSales:allSales,ops:operations(),driverShift:driver,conductorSurname:$('reportConductorSurname')?.value||'',driverSurname:$('reportDriverSurname')?.value||'',printedAt:null};
  existing.push(archive);saveArchives(existing);selectedArchive=archive;return archive;
 }
+
+function openManual(){
+ const box=$('reportManualEditor');if(!box)return;box.style.display='block';
+ const a=selectedArchive;const v=a?.vehicle||getVehicle();const dt=a?.startedAt||new Date().toISOString();
+ const set=(id,val)=>{const el=$(id);if(el)el.value=val==null?'':String(val)};
+ set('manualReportDate',new Date(dt).toISOString().slice(0,16));
+ set('manualReportTransport',a?.vehicle?.type||read('conductor_driver_shift_v1',null)?.transport||'bus');
+ set('manualReportVehicleNo',v.vehicleNo||'');set('manualReportModel',v.model||'');set('manualReportRoute',v.routeName||'');
+ const ar=a||{tickets:tickets(),buffet:sales()};
+ const tr=(ar.tickets||[]).filter(t=>t.status!=='cancelled'&&t.status!=='annulled');
+ set('manualReportTicketCount',tr.reduce((n,t)=>n+Math.max(1,Number(t.quantity||t.qty||1)),0));
+ set('manualReportTicketRevenue',tr.reduce((n,t)=>n+Number(t.total!=null?t.total:(Number(t.price||0)*Number(t.quantity||1))),0).toFixed(2));
+ set('manualReportGoodsRevenue',(ar.buffet||[]).reduce((n,s)=>n+Number(s.total||0),0).toFixed(2));
+ set('manualReportChange',tr.reduce((n,t)=>n+Number(t.change||t.changeAmount||0),0).toFixed(2));
+ set('manualReportGameTime',a?.gameTimeAtFinish||nowGame().replace('не задано','12:00'));
+ set('manualReportConductor',a?.conductorSurname||$('reportConductorSurname')?.value||'');
+ set('manualReportDriver',a?.driverSurname||$('reportDriverSurname')?.value||'');
+ set('manualReportStops',tr.length?Array.from(tr.reduce((m,t)=>{const name=String(t.to||t.destination||'Не указана'),q=Math.max(1,Number(t.quantity||t.qty||1)),sum=Number(t.total!=null?t.total:Number(t.price||0)*q),v=m.get(name)||{q:0,sum:0};v.q+=q;v.sum+=sum;m.set(name,v);return m},new Map()).entries()).map(([n,x])=>x.q+'; '+n+'; '+x.sum.toFixed(2)).join('\n'):'');
+ set('manualReportGoods',(ar.buffet||[]).map(s=>Math.max(1,Number(s.quantity||1))+'; '+(s.name||'Товар')+'; '+Number(s.total||0).toFixed(2)).join('\n'));
+}
+function cancelManual(){const b=$('reportManualEditor');if(b)b.style.display='none'}
+function saveManual(){
+ const val=id=>$(id)?.value||'';
+ const num=id=>Math.max(0,Number(val(id))||0);
+ const parseRows=(id,kind)=>val(id).split(/\r?\n/).map(line=>line.trim()).filter(Boolean).map(line=>{
+  const p=line.split(';').map(x=>x.trim());if(p.length<3)throw new Error('Проверь строку: '+line);
+  const qty=Math.max(0,Number(p[0])||0),name=p.slice(1,-1).join(';')||kind,total=Math.max(0,Number(p[p.length-1].replace(',','.'))||0);
+  return {qty,name,total};
+ });
+ let stops,goods;try{stops=parseRows('manualReportStops','Остановка');goods=parseRows('manualReportGoods','Товар')}catch(e){alert(e.message);return}
+ const ticketCount=num('manualReportTicketCount'),ticketRevenue=num('manualReportTicketRevenue'),goodsRevenue=num('manualReportGoodsRevenue'),change=num('manualReportChange');
+ const ticketsOut=[];let stopCount=stops.reduce((n,x)=>n+x.qty,0);
+ if(stops.length){stops.forEach((x,i)=>ticketsOut.push({id:'manual_'+Date.now()+'_'+i,quantity:x.qty,qty:x.qty,total:x.total,price:x.qty?x.total/x.qty:0,to:x.name,passengerType:'full',paymentMethod:'cash',change:0,status:'issued',manualReport:true}))}
+ else if(ticketCount||ticketRevenue)ticketsOut.push({id:'manual_'+Date.now(),quantity:ticketCount,qty:ticketCount,total:ticketRevenue,price:ticketCount?ticketRevenue/ticketCount:0,to:'Не указана',passengerType:'full',paymentMethod:'cash',change,status:'issued',manualReport:true});
+ const salesOut=goods.length?goods.map((x,i)=>({id:'manual_goods_'+Date.now()+'_'+i,quantity:x.qty,name:x.name,total:x.total,paymentMethod:'cash',manualReport:true})):goodsRevenue?[{id:'manual_goods_'+Date.now(),quantity:1,name:'Товары (итого)',total:goodsRevenue,paymentMethod:'cash',manualReport:true}]:[];
+ const iso=val('manualReportDate')?new Date(val('manualReportDate')).toISOString():new Date().toISOString();
+ const v={type:val('manualReportTransport')||'bus',vehicleNo:val('manualReportVehicleNo')||'—',model:val('manualReportModel')||'—',routeName:val('manualReportRoute')||'—'};
+ const all=archives();const id=selectedArchive?.id||('manual_shift_'+Date.now());
+ const a={id,manual:true,startedAt:iso,finishedAt:iso,gameTimeAtFinish:val('manualReportGameTime')||'не задано',vehicle:v,tickets:ticketsOut,buffet:salesOut,ops:[],driverShift:{transport:v.type,vehicleNumber:v.vehicleNo,vehicle:v.model,routeName:v.routeName,startedAt:iso},conductorSurname:val('manualReportConductor'),driverSurname:val('manualReportDriver'),printedAt:null,manualTotals:{ticketCount,ticketRevenue,goodsRevenue,change}};
+ const i=all.findIndex(x=>x.id===id);if(i>=0)all[i]=a;else all.push(a);saveArchives(all);selectedArchive=a;mode='shift';
+ if($('reportConductorSurname'))$('reportConductorSurname').value=a.conductorSurname;
+ if($('reportDriverSurname'))$('reportDriverSurname').value=a.driverSurname;
+ cancelManual();render();alert('Отчёт сохранён. Его можно распечатать сейчас или позже из списка сохранённых отчётов.');
+}
 function selectArchive(id){if(!id){selectedArchive=null;mode='shift';render();return}const a=archives().find(x=>x.id===id);if(a){selectedArchive=a;mode='shift';render()}}
 function pendingArchive(){return archives().find(a=>!a.printedAt)}
 function read(k,fallback){try{const x=JSON.parse(localStorage.getItem(k));return x==null?fallback:x}catch(_){return fallback}}
