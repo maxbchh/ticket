@@ -4,7 +4,7 @@
 const $=id=>document.getElementById(id);
 const TYPES={bus:'Автобус',trolley:'Троллейбус',tram:'Трамвай',minibus:'Маршрутное такси',uzd:'Узкоколейная ЖД',train:'Железная дорога'};
 const KEY='ticket_report_current_shift_v1';
-let mode='shift';
+let mode='shift';\nlet selectedArchive=null;\nconst ARCHIVES_KEY='ticket_report_archives_v1';\nfunction archives(){return read(ARCHIVES_KEY,[])}\nfunction saveArchives(a){write(ARCHIVES_KEY,a.slice(-50))}\nfunction archiveCurrentShift(){\n const existing=read(ARCHIVES_KEY,[]);\n const driver=read('conductor_driver_shift_v1',null)||{};\n const meta=read(KEY,null)||{};\n const id=meta.id||('shift_'+(driver.realStartedAt||Date.now()));\n if(existing.some(a=>a.id===id&&a.finishedAt))return existing.find(a=>a.id===id);\n const archive={id,startedAt:driver.startedAt||meta.startedAt||new Date().toISOString(),finishedAt:new Date().toISOString(),gameStartTime:driver.gameStartTime||meta.gameStartTime||'не задано',gameTimeAtFinish:nowGame(),vehicle:{type:driver.transport||'bus',vehicleNo:driver.vehicleNumber||localStorage.getItem('conductor_vehicle_number')||'—',model:driver.vehicle||'—',routeName:driver.routeName||'—'},tickets:tickets(),buffet:sales(),ops:operations(),driverShift:driver,conductorSurname:$('reportConductorSurname')?.value||'',driverSurname:$('reportDriverSurname')?.value||'',printedAt:null};\n existing.push(archive);saveArchives(existing);selectedArchive=archive;return archive;\n}\nfunction selectArchive(id){const a=archives().find(x=>x.id===id);if(a){selectedArchive=a;mode='shift';render()}}\nfunction pendingArchive(){return archives().find(a=>!a.printedAt)}
 function read(k,fallback){try{const x=JSON.parse(localStorage.getItem(k));return x==null?fallback:x}catch(_){return fallback}}
 function write(k,v){localStorage.setItem(k,JSON.stringify(v))}
 function money(n){return (Math.round((Number(n)||0)*100)/100).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' BYN'}
@@ -19,10 +19,10 @@ function activeShiftId(){return shiftMeta().id}
 function getVehicle(){
  const s=read('conductor_driver_shift_v1',null);
  const route=(read('conductor_routes',[])).find(r=>String(r.id)===String(s&&s.routeId));
- const type=s&&s.transport||$('transportType')?.value||'bus';
- const routeName=s&&s.routeName||route&&route.name||$('routeSelect')?.selectedOptions?.[0]?.text||'—';
- const model=s&&s.vehicle||$('shiftVehicleModel')?.value||'—';
- const vehicleNo=s&&s.vehicleNumber||localStorage.getItem('conductor_vehicle_number')||'—';
+ const type=selectedArchive?.vehicle?.type||s&&s.transport||$('transportType')?.value||'bus';
+ const routeName=selectedArchive?.vehicle?.routeName||s&&s.routeName||route&&route.name||$('routeSelect')?.selectedOptions?.[0]?.text||'—';
+ const model=selectedArchive?.vehicle?.model||s&&s.vehicle||$('shiftVehicleModel')?.value||'—';
+ const vehicleNo=selectedArchive?.vehicle?.vehicleNo||s&&s.vehicleNumber||localStorage.getItem('conductor_vehicle_number')||'—';
  return {type:TYPES[type]||type,model,routeName,vehicleNo,shift:s};
 }
 function currentRecords(which){
@@ -79,14 +79,14 @@ function print(){render();document.body.classList.add('print-ticket-report');con
 function setMode(m){mode=m==='trip'?'trip':'shift';render()}
 function refresh(){render()}
 window.TicketReports={setMode,refresh,print};
-const oldOpen=window.openShift;
+const originalFinishDriverShift=window.finishDriverShift;\nif(typeof originalFinishDriverShift==='function')window.finishDriverShift=function(){archiveCurrentShift();return originalFinishDriverShift.apply(this,arguments)};\nconst originalSwitchTab=window.switchTab;\nif(typeof originalSwitchTab==='function')window.switchTab=function(tabId,btn){const result=originalSwitchTab.apply(this,arguments);if(tabId==='reports'){const p=pendingArchive();if(p){selectedArchive=p;render();if(confirm('Сохранённый отчёт по завершённой смене готов. Распечатать сейчас?'))print()}else{selectedArchive=null;render()}}return result};\nconst oldOpen=window.openShift;
 window.openShift=function(){if(typeof oldOpen==='function')oldOpen();const m={id:'shift_'+Date.now(),startedAt:new Date().toISOString(),gameStartTime:nowGame()};write(KEY,m);render()};
 const oldTicket=window.processTicketSale;
 if(typeof oldTicket==='function')window.processTicketSale=function(){const before=tickets().length,result=oldTicket.apply(this,arguments),all=tickets();if(all.length>before){const t=all[all.length-1],s=read('conductor_driver_shift_v1',null),qty=Math.max(1,Number($('ticketQuantity')?.value||1));t.quantity=qty;t.total=Math.round(Number(t.price||0)*qty*100)/100;t.reportShiftId=activeShiftId();t.reportTripId=read('conductor_current_trip_id',null);t.routeId=$('routeSelect')?.value||null;t.passengerType=$('passengerType')?.value||'full';t.paymentMethod=window.__cashPaymentMethod==='card'?'card':'cash';t.change=Number($('cashSaleChange')?.textContent?.replace(/[^0-9,.-]/g,'').replace(',','.')||0);t.transportType=$('transportType')?.value||'';write('conductor_tickets',all)}render();return result};
 const oldBuffet=window.completeBuffetPayment;
 if(typeof oldBuffet==='function')window.completeBuffetPayment=function(items,method,total){const before=sales().map(s=>s.id);const r=oldBuffet.apply(this,arguments);const known=new Set(before),all=sales(),id=activeShiftId();all.forEach(s=>{if(!known.has(s.id)){s.reportShiftId=id;s.reportTripId=read('conductor_current_trip_id',null);s.reportRouteId=read('conductor_current_trip_route',null)||(read('conductor_driver_shift_v1',null)||{}).routeId}});write('ticket_excursion_buffet_sales_v1',all);render();return r};
 ['reportConductorSurname','reportDriverSurname'].forEach(id=>$(id)?.addEventListener('input',render));
-window.addEventListener('load',()=>{if(localStorage.getItem('conductor_shift_active')==='true')shiftMeta();render()});
+window.addEventListener('load',()=>{if(localStorage.getItem('conductor_shift_active')==='true')shiftMeta();const p=pendingArchive();if(p)selectedArchive=p;render()});
 window.addEventListener('focus',render);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')render()});
 })();
