@@ -31,8 +31,9 @@ function currentRecords(which){
  const buffetRows=bs.filter(s=>!s.reportShiftId||s.reportShiftId===id);
  if(which==='trip'){
    const trip=read('conductor_current_trip_id',null);
-   const route=read('conductor_current_trip_route',null);
-   return {tickets:ticketRows.filter(t=>(trip&&t.reportTripId===trip)||(route&&String(t.routeId||'')===String(route))||(!t.reportTripId&&!t.routeId)),buffet:buffetRows,ops:operations().filter(o=>!o.reportShiftId||o.reportShiftId===id)};
+   const driver=read('conductor_driver_shift_v1',null);
+   const route=read('conductor_current_trip_route',null)||(driver&&driver.routeId);
+   return {tickets:ticketRows.filter(t=>(trip&&t.reportTripId===trip)||(route&&String(t.routeId||'')===String(route))),buffet:buffetRows.filter(s=>(trip&&s.reportTripId===trip)||(route&&String(s.reportRouteId||'')===String(route))),ops:operations().filter(o=>!o.reportShiftId||o.reportShiftId===id)};
  }
  return {tickets:ticketRows,buffet:buffetRows,ops:operations().filter(o=>!o.reportShiftId||o.reportShiftId===id)};
 }
@@ -83,7 +84,7 @@ window.openShift=function(){if(typeof oldOpen==='function')oldOpen();const m={id
 const oldTicket=window.processTicketSale;
 if(typeof oldTicket==='function')window.processTicketSale=function(){const before=tickets().length,result=oldTicket.apply(this,arguments),all=tickets();if(all.length>before){const t=all[all.length-1],s=read('conductor_driver_shift_v1',null),qty=Math.max(1,Number($('ticketQuantity')?.value||1));t.quantity=qty;t.total=Math.round(Number(t.price||0)*qty*100)/100;t.reportShiftId=activeShiftId();t.reportTripId=read('conductor_current_trip_id',null);t.routeId=$('routeSelect')?.value||null;t.passengerType=$('passengerType')?.value||'full';t.paymentMethod=window.__cashPaymentMethod==='card'?'card':'cash';t.change=Number($('cashSaleChange')?.textContent?.replace(/[^0-9,.-]/g,'').replace(',','.')||0);t.transportType=$('transportType')?.value||'';write('conductor_tickets',all)}render();return result};
 const oldBuffet=window.completeBuffetPayment;
-if(typeof oldBuffet==='function')window.completeBuffetPayment=function(items,method,total){const before=sales().map(s=>s.id);const r=oldBuffet.apply(this,arguments);const known=new Set(before),all=sales(),id=activeShiftId();all.forEach(s=>{if(!known.has(s.id)){s.reportShiftId=id;s.reportTripId=read('conductor_current_trip_id',null)}});write('ticket_excursion_buffet_sales_v1',all);render();return r};
+if(typeof oldBuffet==='function')window.completeBuffetPayment=function(items,method,total){const before=sales().map(s=>s.id);const r=oldBuffet.apply(this,arguments);const known=new Set(before),all=sales(),id=activeShiftId();all.forEach(s=>{if(!known.has(s.id)){s.reportShiftId=id;s.reportTripId=read('conductor_current_trip_id',null);s.reportRouteId=read('conductor_current_trip_route',null)||(read('conductor_driver_shift_v1',null)||{}).routeId}});write('ticket_excursion_buffet_sales_v1',all);render();return r};
 ['reportConductorSurname','reportDriverSurname'].forEach(id=>$(id)?.addEventListener('input',render));
 window.addEventListener('load',()=>{if(localStorage.getItem('conductor_shift_active')==='true')shiftMeta();render()});
 window.addEventListener('focus',render);
