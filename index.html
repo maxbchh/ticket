@@ -152,7 +152,32 @@ body{overflow-x:hidden}
       <div class="form-group"><label>Фамилия кондуктора</label><input id="reportConductorSurname" type="text" placeholder="Фамилия"></div>
       <div class="form-group"><label>Фамилия водителя</label><input id="reportDriverSurname" type="text" placeholder="Фамилия"></div>
     </div>
-    <div class="form-group" style="margin-top:12px"><label>Сохранённые отчёты смен</label><select id="reportArchiveSelect" onchange="TicketReports.selectArchive(this.value)"><option value="">Текущая смена</option></select></div><div id="ticketReportPreview" style="margin:12px auto 0;max-width:100%;overflow:auto"></div>
+    <div class="form-group" style="margin-top:12px"><label>Сохранённые отчёты смен</label><select id="reportArchiveSelect" onchange="TicketReports.selectArchive(this.value)"><option value="">Текущая смена</option></select></div>
+    <div class="ops-actions" style="margin:10px 0">
+      <button class="btn btn-outline" type="button" onclick="TicketReports.openManual()">✍️ Создать / изменить вручную</button>
+      <button class="btn btn-outline" type="button" onclick="TicketReports.cancelManual()">Отмена</button>
+    </div>
+    <div id="reportManualEditor" class="card" style="display:none;margin-top:10px">
+      <div class="card-title">✍️ Ручное заполнение отчёта</div>
+      <p style="font-size:.85rem;color:var(--text-secondary)">Заполняй только если автоматический отчёт потерялся или нужно исправить данные. Сохранение вручную не закрывает смену.</p>
+      <div class="form-grid">
+        <div class="form-group"><label>Дата и время смены</label><input id="manualReportDate" type="datetime-local"></div>
+        <div class="form-group"><label>Вид транспорта</label><select id="manualReportTransport"><option value="bus">Автобус</option><option value="trolley">Троллейбус</option><option value="tram">Трамвай</option><option value="minibus">Маршрутное такси</option><option value="train">Железная дорога</option><option value="uzd">Узкоколейная ЖД</option></select></div>
+        <div class="form-group"><label>Номер автобуса / борта</label><input id="manualReportVehicleNo" placeholder="Например, 7042"></div>
+        <div class="form-group"><label>Модель</label><input id="manualReportModel" placeholder="Модель транспорта"></div>
+        <div class="form-group"><label>Маршрут</label><input id="manualReportRoute" placeholder="Номер и название маршрута"></div>
+        <div class="form-group"><label>Количество билетов</label><input id="manualReportTicketCount" type="number" min="0" value="0"></div>
+        <div class="form-group"><label>Выручка от билетов (BYN)</label><input id="manualReportTicketRevenue" type="number" min="0" step="0.01" value="0"></div>
+        <div class="form-group"><label>Продано товаров (BYN)</label><input id="manualReportGoodsRevenue" type="number" min="0" step="0.01" value="0"></div>
+        <div class="form-group"><label>Сдача (BYN)</label><input id="manualReportChange" type="number" min="0" step="0.01" value="0"></div>
+        <div class="form-group"><label>Игровое время печати</label><input id="manualReportGameTime" type="time" value="12:00"></div>
+        <div class="form-group"><label>Фамилия кондуктора</label><input id="manualReportConductor" placeholder="Фамилия"></div>
+        <div class="form-group"><label>Фамилия водителя</label><input id="manualReportDriver" placeholder="Фамилия"></div>
+      </div>
+      <div class="form-group"><label>Продажи по остановкам (каждая строка: количество; остановка; сумма BYN)</label><textarea id="manualReportStops" rows="4" placeholder="7; Железнодорожный вокзал; 12.60"></textarea></div>
+      <div class="form-group"><label>Проданные товары (каждая строка: количество; товар; сумма BYN)</label><textarea id="manualReportGoods" rows="3" placeholder="4; Вода; 7.60"></textarea></div>
+      <div class="ops-actions"><button class="btn btn-green" type="button" onclick="TicketReports.saveManual()">💾 Сохранить отчёт</button></div>
+    </div><div id="ticketReportPreview" style="margin:12px auto 0;max-width:100%;overflow:auto"></div>
   </div>
 </div>
 <div id="tab-settings" class="tab-content"><div class="card"><div class="card-title">☁️ Общая база данных</div><p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:12px">Данные сохраняются в Supabase и доступны после открытия терминала на другом устройстве.</p><div class="ops-actions"><button class="btn btn-cyan" onclick="syncConductorData()">☁️ Синхронизировать сейчас</button><button class="btn btn-outline" onclick="downloadConductorBackup()">💾 Резервная копия</button></div></div><div class="card"><div class="card-title">Настройки Билета и Печати</div><div class="form-grid"><div class="form-group"><label>Название Организации / Перевозчика</label><input type="text" id="orgName" placeholder="Детская Узкоколейная ЖД" oninput="saveSettings();updatePreview()"></div><div class="form-group"><label>Ширина Бумаги Термопринтера</label><select id="paperWidthSelect" onchange="changePaperWidth()"><option value="58mm">58 мм</option><option value="80mm">80 мм</option></select></div></div><div class="form-group"><label>Текст внизу билета</label><input type="text" id="ticketFooter" placeholder="Счастливого пути!" oninput="saveSettings();updatePreview()"></div><div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px"><button class="btn btn-outline" onclick="exportDataJSON()">📥 Экспорт Настроек в JSON</button><label class="btn btn-outline">📤 Импорт Настроек из JSON<input type="file" id="importJsonInput" accept=".json" style="display:none" onchange="importDataJSON(event)"></label><button class="btn btn-red" onclick="resetToDefaults()">🔄 Сбросить Все Данные</button></div></div></div></div>
