@@ -38,6 +38,7 @@ function currentRecords(which){
  return {tickets:ticketRows,buffet:buffetRows,ops:operations().filter(o=>!o.reportShiftId||o.reportShiftId===id)};
 }
 function render(){
+ const archiveSelect=$('reportArchiveSelect');if(archiveSelect){const list=archives();const selected=selectedArchive?.id||'';archiveSelect.innerHTML='<option value="">Текущая смена</option>'+list.slice().reverse().map(a=>'<option value="'+escape(a.id)+'">'+escape(new Date(a.finishedAt||a.startedAt).toLocaleString('ru-RU'))+' — '+escape((a.vehicle?.routeName)||'смена')+(a.printedAt?' (напечатан)':' (не напечатан)')+'</option>').join('');archiveSelect.value=selected;}
  const host=$('ticketReportPreview');if(!host)return;
  const data=currentRecords(mode),v=getVehicle(),ts=data.tickets.filter(t=>t.status!=='cancelled'&&t.status!=='annulled'),cancelled=data.tickets.filter(t=>t.status==='cancelled'||t.status==='annulled');
  const byType=new Map(),byStop=new Map(),byMethod={cash:0,card:0},methodNames={cash:'Наличные',card:'Карта'};
