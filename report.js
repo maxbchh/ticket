@@ -98,6 +98,8 @@ function print(){render();document.body.classList.add('print-ticket-report');con
 function setMode(m){mode=m==='trip'?'trip':'shift';render()}
 function refresh(){render()}
 window.TicketReports={setMode,refresh,print};
+const originalCloseCashShift=window.closeShift;
+if(typeof originalCloseCashShift==='function')window.closeShift=function(){const result=originalCloseCashShift.apply(this,arguments);if(localStorage.getItem('conductor_shift_active')==='false')archiveCurrentShift();return result};
 const originalFinishDriverShift=window.finishDriverShift;
 if(typeof originalFinishDriverShift==='function')window.finishDriverShift=function(){archiveCurrentShift();return originalFinishDriverShift.apply(this,arguments)};
 const originalSwitchTab=window.switchTab;
