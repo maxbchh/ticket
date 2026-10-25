@@ -27,8 +27,8 @@ function getVehicle(){
 }
 function currentRecords(which){
  const id=activeShiftId(),ts=tickets(),bs=sales();
- const ticketRows=ts.filter(t=>!t.reportShiftId||t.reportShiftId===id);
- const buffetRows=bs.filter(s=>!s.reportShiftId||s.reportShiftId===id);
+ const ticketRows=ts.filter(t=>t.reportShiftId===id);
+ const buffetRows=bs.filter(s=>s.reportShiftId===id);
  if(which==='trip'){
    const trip=read('conductor_current_trip_id',null);
    const driver=read('conductor_driver_shift_v1',null);
