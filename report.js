@@ -18,7 +18,7 @@ function archiveCurrentShift(){
  const archive={id,startedAt:driver.startedAt||meta.startedAt||new Date().toISOString(),finishedAt:new Date().toISOString(),gameStartTime:driver.gameStartTime||meta.gameStartTime||'не задано',gameTimeAtFinish:nowGame(),vehicle:{type:driver.transport||'bus',vehicleNo:driver.vehicleNumber||localStorage.getItem('conductor_vehicle_number')||'—',model:driver.vehicle||'—',routeName:driver.routeName||'—'},tickets:tickets(),buffet:sales(),ops:operations(),driverShift:driver,conductorSurname:$('reportConductorSurname')?.value||'',driverSurname:$('reportDriverSurname')?.value||'',printedAt:null};
  existing.push(archive);saveArchives(existing);selectedArchive=archive;return archive;
 }
-function selectArchive(id){const a=archives().find(x=>x.id===id);if(a){selectedArchive=a;mode='shift';render()}}
+function selectArchive(id){if(!id){selectedArchive=null;mode='shift';render();return}const a=archives().find(x=>x.id===id);if(a){selectedArchive=a;mode='shift';render()}}
 function pendingArchive(){return archives().find(a=>!a.printedAt)}
 function read(k,fallback){try{const x=JSON.parse(localStorage.getItem(k));return x==null?fallback:x}catch(_){return fallback}}
 function write(k,v){localStorage.setItem(k,JSON.stringify(v))}
@@ -71,8 +71,8 @@ function render(){
  data.buffet.forEach(s=>{const q=Math.max(0,Number(s.quantity||1)),sum=Number(s.total||0);goodsRevenue+=sum;goodsCount+=q;const p=products.get(s.name)||{qty:0,sum:0};p.qty+=q;p.sum+=sum;products.set(s.name,p);const m=s.paymentMethod==='card'?'card':'cash';byMethod[m]+=sum});
  const total=ticketRevenue+goodsRevenue;
  const allMethods=byMethod.cash+byMethod.card;
- const s=read('conductor_driver_shift_v1',null),started=(s&&s.startedAt)||shiftMeta().startedAt;
- const printed=nowGame();
+ const s=selectedArchive?.driverShift||read('conductor_driver_shift_v1',null),started=selectedArchive?.startedAt||(s&&s.startedAt)||shiftMeta().startedAt;
+ const printed=selectedArchive?.gameTimeAtFinish||nowGame();
  const lines=(map,kind)=>Array.from(map.entries()).map(([name,x])=>'<div>'+escape(x.qty)+' × '+escape(name)+' — '+money(x.sum)+'</div>').join('')||'<div>Нет записей</div>';
  const stamp='<div class="rp-line"></div><div class="rp-center rp-small">МЕСТО ДЛЯ ПЕЧАТИ ОРГАНИЗАЦИИ</div><div style="height:24px"></div>';
  host.innerHTML='<div id="ticketReportPaper">'+
@@ -91,7 +91,7 @@ function render(){
  '<div class="rp-line"></div><div class="rp-sign">Кондуктор: '+escape($('reportConductorSurname')?.value||'')+'<br>Фамилия / подпись: __________________</div>'+
  '<div class="rp-sign">Водитель: '+escape($('reportDriverSurname')?.value||'')+'<br>Фамилия / подпись: __________________</div>'+stamp+'</div>';
 }
-function print(){render();document.body.classList.add('print-ticket-report');const cleanup=()=>{document.body.classList.remove('print-ticket-report');window.removeEventListener('afterprint',cleanup)};window.addEventListener('afterprint',cleanup);window.print();setTimeout(cleanup,3000)}
+function print(){render();document.body.classList.add('print-ticket-report');const cleanup=()=>{document.body.classList.remove('print-ticket-report');window.removeEventListener('afterprint',cleanup)};window.addEventListener('afterprint',cleanup);window.print();if(selectedArchive){const all=archives();const a=all.find(x=>x.id===selectedArchive.id);if(a){a.printedAt=new Date().toISOString();saveArchives(all);selectedArchive=a}}setTimeout(cleanup,3000)}
 function setMode(m){mode=m==='trip'?'trip':'shift';render()}
 function refresh(){render()}
 window.TicketReports={setMode,refresh,print};
