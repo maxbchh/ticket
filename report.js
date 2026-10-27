@@ -9,16 +9,22 @@ let selectedArchive=null;
 const ARCHIVES_KEY='ticket_report_archives_v1';
 function archives(){return read(ARCHIVES_KEY,[])}
 function saveArchives(a){write(ARCHIVES_KEY,a.slice(-50))}
-function archiveCurrentShift(){
+function archiveCurrentShift(cashShiftIdOverride){
  const existing=read(ARCHIVES_KEY,[]);
  const driver=read('conductor_driver_shift_v1',null)||{};
  const meta=read(KEY,null)||{};
  const id=meta.id||('shift_'+(driver.realStartedAt||Date.now()));
  if(existing.some(a=>a.id===id&&a.finishedAt))return existing.find(a=>a.id===id);
- const cashShiftId=localStorage.getItem('conductor_current_shift_id');
+ const cashShiftId=cashShiftIdOverride||localStorage.getItem('conductor_current_shift_id');
  const allTickets=tickets(),taggedTickets=allTickets.filter(t=>t.reportShiftId===id||(cashShiftId&&t.shiftId===cashShiftId));
  const allSales=sales(),taggedSales=allSales.filter(s=>s.reportShiftId===id);
- const archive={id,startedAt:driver.startedAt||meta.startedAt||new Date().toISOString(),finishedAt:new Date().toISOString(),gameStartTime:driver.gameStartTime||meta.gameStartTime||'не задано',gameTimeAtFinish:nowGame(),vehicle:{type:driver.transport||'bus',vehicleNo:driver.vehicleNumber||localStorage.getItem('conductor_vehicle_number')||'—',model:driver.vehicle||'—',routeName:driver.routeName||'—'},tickets:taggedTickets.length?taggedTickets:allTickets,buffet:taggedSales.length?taggedSales:allSales,ops:operations(),driverShift:driver,conductorSurname:$('reportConductorSurname')?.value||'',driverSurname:$('reportDriverSurname')?.value||'',printedAt:null};
+ const finishedAt=new Date().toISOString(),startedAt=driver.startedAt||meta.startedAt||finishedAt;
+ const inWindow=t=>{const time=Date.parse(t&&t.issuedAt||'');return Number.isFinite(time)&&time>=Date.parse(startedAt)&&time<=Date.parse(finishedAt)};
+ const recoveredTickets=allTickets.filter(t=>t.reportShiftId===id||(cashShiftId&&t.shiftId===cashShiftId)||inWindow(t));
+ const combinedTickets=Array.from(new Map([...taggedTickets,...recoveredTickets].map(t=>[String(t.num??t.id??JSON.stringify(t)),t])).values());
+ const recoveredSales=allSales.filter(s=>s.reportShiftId===id);
+ const combinedSales=Array.from(new Map([...taggedSales,...recoveredSales].map(s=>[String(s.id??(s.name+'|'+s.time)),s])).values());
+ const archive={id,cashShiftId,startedAt,finishedAt,gameStartTime:driver.gameStartTime||meta.gameStartTime||'не задано',gameTimeAtFinish:nowGame(),vehicle:{type:driver.transport||'bus',vehicleNo:driver.vehicleNumber||localStorage.getItem('conductor_vehicle_number')||'—',model:driver.vehicle||'—',routeName:driver.routeName||'—'},tickets:combinedTickets,buffet:combinedSales,ops:operations(),driverShift:driver,conductorSurname:$('reportConductorSurname')?.value||'',driverSurname:$('reportDriverSurname')?.value||'',printedAt:null};
  existing.push(archive);saveArchives(existing);selectedArchive=archive;return archive;
 }
 
@@ -89,7 +95,8 @@ function getVehicle(){
 }
 function currentRecords(which){
  const id=activeShiftId(),ts=tickets(),bs=sales();
- const ticketRows=ts.filter(t=>t.reportShiftId===id);
+ const cashShiftId=localStorage.getItem('conductor_current_shift_id');
+ const ticketRows=ts.filter(t=>t.reportShiftId===id||(cashShiftId&&t.shiftId===cashShiftId));
  const buffetRows=bs.filter(s=>s.reportShiftId===id);
  if(which==='trip'){
    const trip=read('conductor_current_trip_id',null);
@@ -99,11 +106,19 @@ function currentRecords(which){
  }
  return {tickets:ticketRows,buffet:buffetRows,ops:operations().filter(o=>!o.reportShiftId||o.reportShiftId===id)};
 }
-function render(){
- const archiveSelect=$('reportArchiveSelect');if(archiveSelect){const list=archives();const selected=selectedArchive?.id||'';archiveSelect.innerHTML='<option value="">Текущая смена</option>'+list.slice().reverse().map(a=>'<option value="'+escape(a.id)+'">'+escape(new Date(a.finishedAt||a.startedAt).toLocaleString('ru-RU'))+' — '+escape((a.vehicle?.routeName)||'смена')+(a.printedAt?' (напечатан)':' (не напечатан)')+'</option>').join('');archiveSelect.value=selected;}
+function archiveRecords(a){
+ if(!a||a.manual)return {tickets:a?.tickets||[],buffet:a?.buffet||[],ops:a?.ops||[]};
+ const start=Date.parse(a.startedAt||''),end=Date.parse(a.finishedAt||'');
+ const recovered=tickets().filter(t=>t.reportShiftId===a.id||(a.cashShiftId&&t.shiftId===a.cashShiftId)||(()=>{const time=Date.parse(t.issuedAt||'');return Number.isFinite(time)&&Number.isFinite(start)&&Number.isFinite(end)&&time>=start&&time<=end})());
+ const saved=a.tickets||[],combinedTickets=Array.from(new Map([...saved,...recovered].map(t=>[String(t.num??t.id??JSON.stringify(t)),t])).values());
+ const recoveredSales=sales().filter(s=>s.reportShiftId===a.id),savedSales=a.buffet||[],combinedSales=Array.from(new Map([...savedSales,...recoveredSales].map(s=>[String(s.id??(s.name+'|'+s.time)),s])).values());
+ return {tickets:combinedTickets,buffet:combinedSales,ops:a.ops||[]};
+}
+function paymentKind(value){const s=String(value||'').toLowerCase();if(s.includes('qr')||s.includes('кьюар'))return 'qr';if(s.includes('card')||s.includes('карт'))return 'card';return 'cash'}
+function render(){$('reportArchiveSelect');if(archiveSelect){const list=archives();const selected=selectedArchive?.id||'';archiveSelect.innerHTML='<option value="">Текущая смена</option>'+list.slice().reverse().map(a=>'<option value="'+escape(a.id)+'">'+escape(new Date(a.finishedAt||a.startedAt).toLocaleString('ru-RU'))+' — '+escape((a.vehicle?.routeName)||'смена')+(a.printedAt?' (напечатан)':' (не напечатан)')+'</option>').join('');archiveSelect.value=selected;}
  const host=$('ticketReportPreview');if(!host)return;
- const data=(selectedArchive&&mode==='shift')?{tickets:selectedArchive.tickets||[],buffet:selectedArchive.buffet||[],ops:selectedArchive.ops||[]}:currentRecords(mode),v=getVehicle(),ts=data.tickets.filter(t=>t.status!=='cancelled'&&t.status!=='annulled'),cancelled=data.tickets.filter(t=>t.status==='cancelled'||t.status==='annulled');
- const byType=new Map(),byStop=new Map(),byMethod={cash:0,card:0},methodNames={cash:'Наличные',card:'Карта'};
+ const data=(selectedArchive&&mode==='shift')?archiveRecords(selectedArchive):currentRecords(mode),v=getVehicle(),ts=data.tickets.filter(t=>t.status!=='cancelled'&&t.status!=='annulled'),cancelled=data.tickets.filter(t=>t.status==='cancelled'||t.status==='annulled');
+ const byType=new Map(),byStop=new Map(),byMethod={cash:0,card:0,qr:0};
  let ticketRevenue=0, ticketCount=0,change=0;
  ts.forEach(t=>{
   const qty=Math.max(1,Number(t.quantity||t.qty||1)),price=Number(t.total!=null?t.total:(Number(t.price||0)*qty));
@@ -111,11 +126,11 @@ function render(){
   const rawKind=t.passengerType||t.passenger||t.category||'Билет';const kind=({full:'Полный',lgt:'Льготный',child:'Школьный',luggage:'Багаж / животные'})[rawKind]||rawKind;
   const prev=byType.get(kind)||{qty:0,sum:0};prev.qty+=qty;prev.sum+=price;byType.set(kind,prev);
   const stop=String(t.to||t.destination||'Не указана');const st=byStop.get(stop)||{qty:0,sum:0};st.qty+=qty;st.sum+=price;byStop.set(stop,st);
-  const method=t.paymentMethod==='card'?'card':'cash';byMethod[method]+=price;
+  const method=paymentKind(t.paymentMethod);byMethod[method]+=price;
   change+=Number(t.change||t.changeAmount||0);
  });
  const products=new Map();let goodsRevenue=0,goodsCount=0;
- data.buffet.forEach(s=>{const q=Math.max(0,Number(s.quantity||1)),sum=Number(s.total||0);goodsRevenue+=sum;goodsCount+=q;const p=products.get(s.name)||{qty:0,sum:0};p.qty+=q;p.sum+=sum;products.set(s.name,p);const m=s.paymentMethod==='card'?'card':'cash';byMethod[m]+=sum});
+ data.buffet.forEach(s=>{const q=Math.max(0,Number(s.quantity||1)),sum=Number(s.total||0);goodsRevenue+=sum;goodsCount+=q;const p=products.get(s.name)||{qty:0,sum:0};p.qty+=q;p.sum+=sum;products.set(s.name,p);const m=paymentKind(s.paymentMethod);byMethod[m]+=sum});
  const total=ticketRevenue+goodsRevenue;
  const allMethods=byMethod.cash+byMethod.card;
  const s=selectedArchive?.driverShift||read('conductor_driver_shift_v1',null),started=selectedArchive?.startedAt||(s&&s.startedAt)||shiftMeta().startedAt;
@@ -134,7 +149,7 @@ function render(){
  '<div class="rp-line"></div><b>ТОВАРЫ</b><div>Количество: '+goodsCount+' шт.</div>'+lines(products,'goods')+
  '<div class="rp-line"></div><b>ПО ОСТАНОВКАМ</b>'+Array.from(byStop.entries()).map(([name,x])=>'<div>'+x.qty+' × '+escape(name)+'</div>').join('')+'<div class="rp-line"></div>'+
  '<b>ФИНАНСЫ</b><div class="rp-row"><span>Билеты</span><b>'+money(ticketRevenue)+'</b></div><div class="rp-row"><span>Товары</span><b>'+money(goodsRevenue)+'</b></div><div class="rp-row"><span>ВЫРУЧКА</span><b>'+money(total)+'</b></div>'+
- '<div class="rp-row"><span>Наличные (оценка)</span><span>'+money(byMethod.cash)+'</span></div><div class="rp-row"><span>Карта (оценка)</span><span>'+money(byMethod.card)+'</span></div><div class="rp-row"><span>Сдача (если записана)</span><span>'+money(change)+'</span></div><div class="rp-row"><span>Аннулировано</span><span>'+cancelled.length+'</span></div>'+
+ '<div class="rp-row"><span>Наличные (оценка)</span><span>'+money(byMethod.cash)+'</span></div><div class="rp-row"><span>Карта (оценка)</span><span>'+money(byMethod.card)+'</span></div><div class="rp-row"><span>QR / электронная оплата</span><span>'+money(byMethod.qr)+'</span></div><div class="rp-row"><span>Сдача (если записана)</span><span>'+money(change)+'</span></div><div class="rp-row"><span>Аннулировано</span><span>'+cancelled.length+'</span></div>'+
  '<div class="rp-line"></div><div class="rp-sign">Кондуктор: '+escape($('reportConductorSurname')?.value||'')+'<br>Фамилия / подпись: __________________</div>'+
  '<div class="rp-sign">Водитель: '+escape($('reportDriverSurname')?.value||'')+'<br>Фамилия / подпись: __________________</div>'+stamp+'</div>';
 }
@@ -143,7 +158,7 @@ function setMode(m){mode=m==='trip'?'trip':'shift';render()}
 function refresh(){render()}
 window.TicketReports={setMode,refresh,print};
 const originalCloseCashShift=window.closeShift;
-if(typeof originalCloseCashShift==='function')window.closeShift=function(){const result=originalCloseCashShift.apply(this,arguments);if(localStorage.getItem('conductor_shift_active')==='false')archiveCurrentShift();return result};
+if(typeof originalCloseCashShift==='function')window.closeShift=function(){const cashShiftIdBefore=localStorage.getItem('conductor_current_shift_id');const result=originalCloseCashShift.apply(this,arguments);if(localStorage.getItem('conductor_shift_active')==='false')archiveCurrentShift(cashShiftIdBefore);return result};
 const originalFinishDriverShift=window.finishDriverShift;
 if(typeof originalFinishDriverShift==='function')window.finishDriverShift=function(){archiveCurrentShift();return originalFinishDriverShift.apply(this,arguments)};
 const originalSwitchTab=window.switchTab;
@@ -151,7 +166,7 @@ if(typeof originalSwitchTab==='function')window.switchTab=function(tabId,btn){co
 const oldOpen=window.openShift;
 window.openShift=function(){if(typeof oldOpen==='function')oldOpen();const m={id:'shift_'+Date.now(),startedAt:new Date().toISOString(),gameStartTime:nowGame()};write(KEY,m);render()};
 const oldTicket=window.processTicketSale;
-if(typeof oldTicket==='function')window.processTicketSale=function(){const before=tickets().length,result=oldTicket.apply(this,arguments),all=tickets();if(all.length>before){const t=all[all.length-1],s=read('conductor_driver_shift_v1',null),qty=Math.max(1,Number($('ticketQuantity')?.value||1));t.quantity=qty;t.total=Math.round(Number(t.price||0)*qty*100)/100;t.reportShiftId=activeShiftId();t.reportTripId=read('conductor_current_trip_id',null);t.routeId=$('routeSelect')?.value||null;t.passengerType=$('passengerType')?.value||'full';t.paymentMethod=window.__cashPaymentMethod==='card'?'card':'cash';t.change=Number($('cashSaleChange')?.textContent?.replace(/[^0-9,.-]/g,'').replace(',','.')||0);t.transportType=$('transportType')?.value||'';write('conductor_tickets',all)}render();return result};
+if(typeof oldTicket==='function')window.processTicketSale=function(){const before=tickets().length,result=oldTicket.apply(this,arguments),all=tickets();if(all.length>before){const added=all.slice(before),trip=read('conductor_current_trip_id',null),routeId=$('routeSelect')?.value||null,change=Number($('cashSaleChange')?.textContent?.replace(/[^0-9,.-]/g,'').replace(',','.')||0);added.forEach((t,i)=>{t.reportShiftId=activeShiftId();t.reportTripId=trip;t.routeId=t.routeId||routeId;t.passengerType=t.passengerType||$('passengerType')?.value||'full';t.paymentMethod=paymentKind(t.paymentMethod||window.__cashPaymentMethod||'cash');t.quantity=1;t.qty=1;t.total=Math.round(Number(t.price||0)*100)/100;t.change=i===added.length-1?change:0;t.transportType=t.transportType||$('transportType')?.value||''});write('conductor_tickets',all)}render();return result};
 const oldBuffet=window.completeBuffetPayment;
 if(typeof oldBuffet==='function')window.completeBuffetPayment=function(items,method,total){const before=sales().map(s=>s.id);const r=oldBuffet.apply(this,arguments);const known=new Set(before),all=sales(),id=activeShiftId();all.forEach(s=>{if(!known.has(s.id)){s.reportShiftId=id;s.reportTripId=read('conductor_current_trip_id',null);s.reportRouteId=read('conductor_current_trip_route',null)||(read('conductor_driver_shift_v1',null)||{}).routeId}});write('ticket_excursion_buffet_sales_v1',all);render();return r};
 ['reportConductorSurname','reportDriverSurname'].forEach(id=>$(id)?.addEventListener('input',render));
