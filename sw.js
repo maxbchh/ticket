@@ -1,4 +1,4 @@
-const CACHE_NAME = "ticket-pwa-v30";
+const CACHE_NAME = "ticket-pwa-v31";
 const APP_SHELL = ["./", "./index.html", "./manifest.webmanifest", "./cloud-sync.js", "./cash-fix.js", "./qr-sales.js", "./qr-pay.html", "./route-payment-qr.js", "./buffet-design.js", "./buffet-cashier.js", "./shift-sync.js", "./report.js"];
 
 self.addEventListener("install", event => {
