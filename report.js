@@ -19,8 +19,7 @@ function archiveCurrentShift(cashShiftIdOverride){
  const allTickets=tickets(),taggedTickets=allTickets.filter(t=>t.reportShiftId===id||(cashShiftId&&t.shiftId===cashShiftId));
  const allSales=sales(),taggedSales=allSales.filter(s=>s.reportShiftId===id);
  const finishedAt=new Date().toISOString(),startedAt=driver.startedAt||meta.startedAt||finishedAt;
- const inWindow=t=>{const time=Date.parse(t&&t.issuedAt||'');return Number.isFinite(time)&&time>=Date.parse(startedAt)&&time<=Date.parse(finishedAt)};
- const recoveredTickets=allTickets.filter(t=>t.reportShiftId===id||(cashShiftId&&t.shiftId===cashShiftId)||inWindow(t));
+ const recoveredTickets=allTickets.filter(t=>t.reportShiftId===id||(cashShiftId&&t.shiftId===cashShiftId));
  const combinedTickets=Array.from(new Map([...taggedTickets,...recoveredTickets].map(t=>[String(t.num??t.id??JSON.stringify(t)),t])).values());
  const recoveredSales=allSales.filter(s=>s.reportShiftId===id);
  const combinedSales=Array.from(new Map([...taggedSales,...recoveredSales].map(s=>[String(s.id??(s.name+'|'+s.time)),s])).values());
@@ -109,8 +108,9 @@ function currentRecords(which){
 function archiveRecords(a){
  if(!a||a.manual)return {tickets:a?.tickets||[],buffet:a?.buffet||[],ops:a?.ops||[]};
  const start=Date.parse(a.startedAt||''),end=Date.parse(a.finishedAt||'');
- const recovered=tickets().filter(t=>t.reportShiftId===a.id||(a.cashShiftId&&t.shiftId===a.cashShiftId)||(()=>{const time=Date.parse(t.issuedAt||'');return Number.isFinite(time)&&Number.isFinite(start)&&Number.isFinite(end)&&time>=start&&time<=end})());
- const saved=a.tickets||[],combinedTickets=Array.from(new Map([...saved,...recovered].map(t=>[String(t.num??t.id??JSON.stringify(t)),t])).values());
+ const belongsToArchive=t=>t.reportShiftId===a.id||(a.cashShiftId&&t.shiftId===a.cashShiftId);
+ const recovered=tickets().filter(belongsToArchive);
+ const saved=(a.tickets||[]).filter(belongsToArchive),combinedTickets=Array.from(new Map([...saved,...recovered].map(t=>[String(t.num??t.id??JSON.stringify(t)),t])).values());
  const recoveredSales=sales().filter(s=>s.reportShiftId===a.id),savedSales=a.buffet||[],combinedSales=Array.from(new Map([...savedSales,...recoveredSales].map(s=>[String(s.id??(s.name+'|'+s.time)),s])).values());
  return {tickets:combinedTickets,buffet:combinedSales,ops:a.ops||[]};
 }
