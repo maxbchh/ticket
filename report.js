@@ -163,7 +163,7 @@ if(typeof originalCloseCashShift==='function')window.closeShift=function(){const
 const originalFinishDriverShift=window.finishDriverShift;
 if(typeof originalFinishDriverShift==='function')window.finishDriverShift=function(){archiveCurrentShift();return originalFinishDriverShift.apply(this,arguments)};
 const originalSwitchTab=window.switchTab;
-if(typeof originalSwitchTab==='function')window.switchTab=function(tabId,btn){const result=originalSwitchTab.apply(this,arguments);if(tabId==='reports'){const p=pendingArchive();if(p){selectedArchive=p;render();if(confirm('Сохранённый отчёт по завершённой смене готов. Распечатать сейчас?'))print()}else{selectedArchive=null;render()}}return result};
+if(typeof originalSwitchTab==='function')window.switchTab=function(tabId,btn){const result=originalSwitchTab.apply(this,arguments);if(tabId==='reports'){try{selectedArchive=null;render()}catch(e){console.error('Ошибка вкладки отчётов:',e);const host=$('ticketReportPreview');if(host)host.textContent='Не удалось загрузить отчёт. Нажми «Обновить» или перезагрузи страницу.'}}return result};
 const oldOpen=window.openShift;
 window.openShift=function(){if(typeof oldOpen==='function')oldOpen();const m={id:'shift_'+Date.now(),startedAt:new Date().toISOString(),gameStartTime:nowGame()};write(KEY,m);render()};
 const oldTicket=window.processTicketSale;
