@@ -115,7 +115,8 @@ function archiveRecords(a){
  return {tickets:combinedTickets,buffet:combinedSales,ops:a.ops||[]};
 }
 function paymentKind(value){const s=String(value||'').toLowerCase();if(s.includes('qr')||s.includes('кьюар'))return 'qr';if(s.includes('card')||s.includes('карт'))return 'card';return 'cash'}
-function render(){$('reportArchiveSelect');if(archiveSelect){const list=archives();const selected=selectedArchive?.id||'';archiveSelect.innerHTML='<option value="">Текущая смена</option>'+list.slice().reverse().map(a=>'<option value="'+escape(a.id)+'">'+escape(new Date(a.finishedAt||a.startedAt).toLocaleString('ru-RU'))+' — '+escape((a.vehicle?.routeName)||'смена')+(a.printedAt?' (напечатан)':' (не напечатан)')+'</option>').join('');archiveSelect.value=selected;}
+function render(){
+  const archiveSelect=$('reportArchiveSelect');if(archiveSelect){const list=archives();const selected=selectedArchive?.id||'';archiveSelect.innerHTML='<option value="">Текущая смена</option>'+list.slice().reverse().map(a=>'<option value="'+escape(a.id)+'">'+escape(new Date(a.finishedAt||a.startedAt).toLocaleString('ru-RU'))+' — '+escape((a.vehicle?.routeName)||'смена')+(a.printedAt?' (напечатан)':' (не напечатан)')+'</option>').join('');archiveSelect.value=selected;}
  const host=$('ticketReportPreview');if(!host)return;
  const data=(selectedArchive&&mode==='shift')?archiveRecords(selectedArchive):currentRecords(mode),v=getVehicle(),ts=data.tickets.filter(t=>t.status!=='cancelled'&&t.status!=='annulled'),cancelled=data.tickets.filter(t=>t.status==='cancelled'||t.status==='annulled');
  const byType=new Map(),byStop=new Map(),byMethod={cash:0,card:0,qr:0};
