@@ -157,7 +157,7 @@ function render(){
 function print(){render();document.body.classList.add('print-ticket-report');const cleanup=()=>{document.body.classList.remove('print-ticket-report');window.removeEventListener('afterprint',cleanup)};window.addEventListener('afterprint',cleanup);window.print();if(selectedArchive){const all=archives();const a=all.find(x=>x.id===selectedArchive.id);if(a){a.printedAt=new Date().toISOString();saveArchives(all);selectedArchive=a}}setTimeout(cleanup,3000)}
 function setMode(m){mode=m==='trip'?'trip':'shift';render()}
 function refresh(){render()}
-window.TicketReports={setMode,refresh,print};
+window.TicketReports={setMode,refresh,print,selectArchive,openManual,cancelManual,saveManual};
 const originalCloseCashShift=window.closeShift;
 if(typeof originalCloseCashShift==='function')window.closeShift=function(){const cashShiftIdBefore=localStorage.getItem('conductor_current_shift_id');const result=originalCloseCashShift.apply(this,arguments);if(localStorage.getItem('conductor_shift_active')==='false')archiveCurrentShift(cashShiftIdBefore);return result};
 const originalFinishDriverShift=window.finishDriverShift;
