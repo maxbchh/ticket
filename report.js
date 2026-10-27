@@ -8,13 +8,13 @@ let mode='shift';
 let selectedArchive=null;
 const ARCHIVES_KEY='ticket_report_archives_v1';
 function archives(){return read(ARCHIVES_KEY,[])}
-function saveArchives(a){write(ARCHIVES_KEY,a.slice(-50))}
+function saveArchives(a){write(ARCHIVES_KEY,a.slice(-50));if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync()}
 function archiveCurrentShift(cashShiftIdOverride){
  const existing=read(ARCHIVES_KEY,[]);
  const driver=read('conductor_driver_shift_v1',null)||{};
  const meta=read(KEY,null)||{};
  const id=meta.id||('shift_'+(driver.realStartedAt||Date.now()));
- if(existing.some(a=>a.id===id&&a.finishedAt))return existing.find(a=>a.id===id);
+ const previousIndex=existing.findIndex(a=>a.id===id);
  const cashShiftId=cashShiftIdOverride||localStorage.getItem('conductor_current_shift_id');
  const allTickets=tickets(),taggedTickets=allTickets.filter(t=>t.reportShiftId===id||(cashShiftId&&t.shiftId===cashShiftId));
  const allSales=sales(),taggedSales=allSales.filter(s=>s.reportShiftId===id);
@@ -25,7 +25,7 @@ function archiveCurrentShift(cashShiftIdOverride){
  const recoveredSales=allSales.filter(s=>s.reportShiftId===id);
  const combinedSales=Array.from(new Map([...taggedSales,...recoveredSales].map(s=>[String(s.id??(s.name+'|'+s.time)),s])).values());
  const archive={id,cashShiftId,startedAt,finishedAt,gameStartTime:driver.gameStartTime||meta.gameStartTime||'не задано',gameTimeAtFinish:nowGame(),vehicle:{type:driver.transport||'bus',vehicleNo:driver.vehicleNumber||localStorage.getItem('conductor_vehicle_number')||'—',model:driver.vehicle||'—',routeName:driver.routeName||'—'},tickets:combinedTickets,buffet:combinedSales,ops:operations(),driverShift:driver,conductorSurname:$('reportConductorSurname')?.value||'',driverSurname:$('reportDriverSurname')?.value||'',printedAt:null};
- existing.push(archive);saveArchives(existing);selectedArchive=archive;return archive;
+ if(previousIndex>=0)existing[previousIndex]=archive;else existing.push(archive);saveArchives(existing);selectedArchive=archive;return archive;
 }
 
 function openManual(){
@@ -161,7 +161,7 @@ window.TicketReports={setMode,refresh,print,selectArchive,openManual,cancelManua
 const originalCloseCashShift=window.closeShift;
 if(typeof originalCloseCashShift==='function')window.closeShift=function(){const cashShiftIdBefore=localStorage.getItem('conductor_current_shift_id');const result=originalCloseCashShift.apply(this,arguments);if(localStorage.getItem('conductor_shift_active')==='false')archiveCurrentShift(cashShiftIdBefore);return result};
 const originalFinishDriverShift=window.finishDriverShift;
-if(typeof originalFinishDriverShift==='function')window.finishDriverShift=function(){archiveCurrentShift();return originalFinishDriverShift.apply(this,arguments)};
+if(typeof originalFinishDriverShift==='function')window.finishDriverShift=function(){const result=originalFinishDriverShift.apply(this,arguments);try{archiveCurrentShift();render();if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync()}catch(e){console.error('Не удалось сохранить отчёт завершённой смены:',e)}return result};
 const originalSwitchTab=window.switchTab;
 if(typeof originalSwitchTab==='function')window.switchTab=function(tabId,btn){const result=originalSwitchTab.apply(this,arguments);if(tabId==='reports'){try{selectedArchive=null;render()}catch(e){console.error('Ошибка вкладки отчётов:',e);const host=$('ticketReportPreview');if(host)host.textContent='Не удалось загрузить отчёт. Нажми «Обновить» или перезагрузи страницу.'}}return result};
 const oldOpen=window.openShift;
