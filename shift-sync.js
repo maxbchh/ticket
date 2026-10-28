@@ -22,7 +22,7 @@ async function syncShift(){
   var h={apikey:API_KEY,Authorization:'Bearer '+API_KEY};
   var get=await fetch(ENDPOINT+'?select=data&id=eq.main',{headers:h,cache:'no-store'});if(!get.ok)throw Error('GET '+get.status);
   var rows=await get.json(),data=rows&&rows[0]&&rows[0].data||{};
-  var copy=shift?Object.assign({},shift,{updatedAt:new Date().toISOString()}):null;
+  var copy=shift?Object.assign({},shift,{updatedAt:shift.updatedAt||new Date().toISOString()}):null;
   data.driverShift=copy;
   var save=await fetch(ENDPOINT,{method:'POST',headers:Object.assign({},h,{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({id:'main',data:data,updated_at:new Date().toISOString()})});
   if(!save.ok)throw Error('POST '+save.status);
