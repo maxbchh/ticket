@@ -288,8 +288,11 @@
     html+='<div class="rp-line"></div><b>КАТЕГОРИИ</b>'+(types.length?types.map(([name,r])=>'<div>'+esc(r.qty)+' × '+esc(name)+'</div>').join(''):'<div>Нет данных</div>');
     html+='<div class="rp-line"></div><b>ТОВАРЫ</b><div>Количество: '+esc(stats.goodsCount)+' шт.</div>'+(goods.length?goods.map(([name,r])=>'<div>'+esc(r.qty)+' × '+esc(name)+' — '+esc(money(r.sum))+'</div>').join(''):'<div>Нет продаж товаров</div>');
     html+='<div class="rp-line"></div><b>ФИНАНСЫ</b>'+line('Билеты до возвратов',money(stats.grossTicketRevenue))+line('Возвраты','− '+money(stats.refundTotal))+line('Билеты после возвратов',money(stats.netTicketRevenue))+line('Товары',money(stats.goodsRevenue))+line('ИТОГО',money(stats.totalRevenue))+line('Сдача пассажирам',money(stats.change))+line('Наличные',money(stats.payments.cash))+line('Карта',money(stats.payments.card))+line('QR / электронно',money(stats.payments.qr))+line('Аннулировано',stats.cancelledCount+' шт.');
-    const note=(a&&a.reportMessage)||s.reportMessage;if(note)html+='<div class="rp-line"></div><b>ПРИМЕЧАНИЕ</b><div>'+esc(note)+'</div>';
-    html+='<div class="rp-line"></div><div class="rp-sign">Кондуктор: '+esc((a&&a.conductorSurname)||s.conductorSurname||'________________')+'<br>Подпись: __________________</div><div class="rp-sign">Водитель: '+esc((a&&a.driverSurname)||s.driverSurname||'________________')+'<br>Подпись: __________________</div><div class="rp-line"></div><div class="rp-center rp-small">Отчёт сформирован терминалом «Тикет»</div>';
+    const note=($('reportMessage')&&$('reportMessage').value.trim())||(a&&a.reportMessage)||s.reportMessage;
+    const conductor=($('reportConductorSurname')&&$('reportConductorSurname').value.trim())||(a&&a.conductorSurname)||s.conductorSurname||'________________';
+    const driver=($('reportDriverSurname')&&$('reportDriverSurname').value.trim())||(a&&a.driverSurname)||s.driverSurname||'________________';
+    if(note)html+='<div class="rp-line"></div><b>ПРИМЕЧАНИЕ</b><div>'+esc(note)+'</div>';
+    html+='<div class="rp-line"></div><div class="rp-sign">Кондуктор: '+esc(conductor)+'<br>Подпись: __________________</div><div class="rp-sign">Водитель: '+esc(driver)+'<br>Подпись: __________________</div><div class="rp-line"></div><div class="rp-center rp-small">Отчёт сформирован терминалом «Тикет»</div>';
     if(ctx.legacyWarning)html+='<div class="rp-line"></div><div>АРХИВ СТАРОГО ФОРМАТА</div>';
     return html;
   }
@@ -326,6 +329,11 @@
     historyHtml+=all.map(a=>{const av=vehicle(a.driverShift,a);return '<button type="button" class="report-history-item '+(selectedArchiveId===String(a.id)?'is-selected':'')+'" data-action="select-archive" data-id="'+esc(a.id)+'"><div class="report-history-top"><span class="report-history-title">'+esc(av.routeName||'Водительская смена')+'</span><span class="report-tag '+(!a.printedAt?'pending':'')+'">'+(a.printedAt?'Напечатан':'Ждёт печати')+'</span></div><div class="report-history-meta">'+esc(av.type+' №'+av.vehicleNo)+'<br>'+esc(date(a.startedAt))+' — '+esc(time(a.finishedAt))+'<br>'+esc((a.tickets||[]).length+' записей'+(a.reportVersion<2&&!a.manual?' · старый формат':''))+'</div></button>'}).join('');
     txt('reportArchiveCount',all.length+' отчёт(ов)');$('reportHistory').innerHTML=historyHtml||'<div class="report-empty">Завершённые смены появятся здесь после первого рейса.</div>';
     const infoHost=$('reportShiftInfo');infoHost.innerHTML='<div class="report-info-list">'+info('Транспорт',v.type+' №'+v.vehicleNo)+info('Модель',v.model)+info('Маршрут',v.routeName)+info('Начало',date(ctx.archive?ctx.archive.startedAt:ctx.shift.startedAt))+info('Окончание',date(ctx.archive?ctx.archive.finishedAt:ctx.shift.finishedAt))+info('Игровое время окончания',(ctx.archive&&ctx.archive.gameTimeAtFinish)||ctx.shift.gameTimeAtFinish||gameTime(ctx.shift,ctx.archive?ctx.archive.finishedAt:ctx.shift.finishedAt))+'</div>';
+    const detailShift=ctx.archive?(ctx.archive.driverShift||{}):(ctx.shift||{});
+    const conductorField=$('reportConductorSurname'),driverField=$('reportDriverSurname'),messageField=$('reportMessage');
+    if(conductorField&&document.activeElement!==conductorField)conductorField.value=(ctx.archive&&ctx.archive.conductorSurname)||detailShift.conductorSurname||'';
+    if(driverField&&document.activeElement!==driverField)driverField.value=(ctx.archive&&ctx.archive.driverSurname)||detailShift.driverSurname||'';
+    if(messageField&&document.activeElement!==messageField)messageField.value=(ctx.archive&&ctx.archive.reportMessage)||detailShift.reportMessage||'';
     txt('reportScopeNote',ctx.archive&&ctx.archive.reportVersion<2?'Это архив прежней версии. Продажи по общему маршруту не объединяются с новым отчётом.':active?'Сейчас учитываются записи, связанные с ID именно этой водительской смены.':'Отчёт сохранён отдельно и не меняется при начале следующей смены.');
     const e=$('reportManualEditor');if(e&&e.dataset.keepOpen!=='1')e.hidden=true;
     const d=ctx.archive?ctx.archive.driverShift||{}:ctx.shift||{};
