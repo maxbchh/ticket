@@ -8,56 +8,37 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
-
       - name: Install dependencies
         run: npm install
-
       - name: Prepare web assets
         run: |
           rm -rf www
           mkdir -p www
-          cp ./*.js ./*.html ./*.webmanifest ./manifest.json ./manifest.webmanifest www/ 2>/dev/null || true
+          cp ./*.js ./*.html ./*.webmanifest www/ 2>/dev/null || true
           test -f www/index.html
-          test -f www/cloud-sync.js
-          test -f www/qr-sales.js
-          test -f www/report.js
-          test -f www/route-payment-qr.js
-          test -f www/buffet-design.js
-          test -f www/buffet-cashier.js
-          test -f www/shift-sync.js
-          test -f www/card-bridge.js
-          test -f www/qr-pay.html
-          test -f www/qr-ticket.html
-          test -f www/card-terminal.html
-          node -e "const fs=require('fs');const h=fs.readFileSync('www/index.html','utf8');const refs=[...h.matchAll(/(?:src|href)=['\\\"]\\.\\/([^'\\\"]+)/g)].map(x=>x[1]).filter(x=>/\\.(?:js|html|webmanifest)$/.test(x));const miss=refs.filter(x=>!fs.existsSync('www/'+x));if(miss.length){console.error('Missing web assets:',miss.join(', '));process.exit(1)}"
-
+          for file in cloud-sync.js qr-sales.js report.js route-payment-qr.js buffet-design.js buffet-cashier.js shift-sync.js card-bridge.js qr-pay.html qr-ticket.html card-terminal.html; do test -f "www/$file" || { echo "Missing required asset: $file"; exit 1; }; done
+          node -e 'const fs=require("fs");const h=fs.readFileSync("www/index.html","utf8");const refs=[...h.matchAll(/(?:src|href)=["\x27]\.\/([^"\x27]+)/g)].map(x=>x[1]).filter(x=>/\.(?:js|html|webmanifest)$/.test(x));const miss=refs.filter(x=>!fs.existsSync("www/"+x));if(miss.length){console.error("Missing referenced assets:",miss.join(", "));process.exit(1)}'
       - name: Create Android project
         run: npx cap add android
-
       - name: Sync Capacitor
         run: npx cap sync android
-
       - name: Build debug APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
