@@ -1,13 +1,23 @@
-const CACHE_NAME = "ticket-pwa-v36";
-const APP_SHELL = ["./", "./index.html", "./manifest.webmanifest", "./cloud-sync.js", "./cash-fix.js", "./qr-sales.js", "./qr-pay.html", "./route-payment-qr.js", "./buffet-design.js", "./buffet-cashier.js", "./shift-sync.js", "./report.js"];
+const CACHE_NAME = "ticket-pwa-v37";
+const APP_SHELL = [
+  "./", "./index.html", "./manifest.webmanifest", "./cloud-sync.js",
+  "./qr-sales.js", "./qr-pay.html", "./qr-ticket.html", "./card-terminal.html",
+  "./route-payment-qr.js", "./buffet-design.js", "./buffet-cashier.js",
+  "./shift-sync.js", "./report.js", "./card-bridge.js"
+];
 
 self.addEventListener("install", event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", event => {
   event.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -19,8 +29,10 @@ self.addEventListener("fetch", event => {
 
   event.respondWith(
     fetch(event.request).then(response => {
-      const copy = response.clone();
-      caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+      if (response && response.ok) {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+      }
       return response;
     }).catch(() => caches.match(event.request).then(cached => cached || caches.match("./index.html")))
   );

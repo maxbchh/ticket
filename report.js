@@ -101,7 +101,7 @@ function currentRecords(which){
    const trip=read('conductor_current_trip_id',null);
    const driver=read('conductor_driver_shift_v1',null);
    const route=read('conductor_current_trip_route',null)||(driver&&driver.routeId);
-   return {tickets:ticketRows.filter(t=>(trip&&t.reportTripId===trip)||(route&&String(t.routeId||'')===String(route))),buffet:buffetRows.filter(s=>(trip&&s.reportTripId===trip)||(route&&String(s.reportRouteId||'')===String(route))),ops:operations().filter(o=>!o.reportShiftId||o.reportShiftId===id)};
+   return {tickets:ticketRows.filter(t=>trip?t.reportTripId===trip:!!route&&String(t.routeId||'')===String(route)),buffet:buffetRows.filter(s=>trip?s.reportTripId===trip:!!route&&String(s.reportRouteId||'')===String(route)),ops:operations().filter(o=>!o.reportShiftId||o.reportShiftId===id)};
  }
  return {tickets:ticketRows,buffet:buffetRows,ops:operations().filter(o=>!o.reportShiftId||o.reportShiftId===id)};
 }
