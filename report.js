@@ -4,7 +4,7 @@
   const DRIVER_KEY='conductor_driver_shift_v1', TICKETS_KEY='conductor_tickets';
   const BUFFET_KEY='ticket_excursion_buffet_sales_v1', ARCHIVES_KEY='ticket_report_archives_v1';
   const TRIP_KEY='conductor_current_trip_id', $=id=>document.getElementById(id);
-  const TYPES={bus:'Автобус',trolley:'Троллейбус',tram:'Трамвай',minibus:'Маршрутное такси',uzd:'Узкоколейная ЖД',train:'Железная дорога'};
+  const TYPES={bus:'Автобус',trolley:'Троллейбус',tram:'Трамвай',minibus:'Маршрутное такси',uzd:'Транспорт',train:'Железная дорога'};
   let selectedArchiveId='', root=null, renderQueued=false;
 
   function read(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v)}catch(_){return d}}
@@ -40,6 +40,8 @@
   }
   function storeShift(s){
     if(!s)return;
+    s.updatedAt=new Date().toISOString();
+    localStorage.setItem('conductor_shift_state_updated_at',s.updatedAt);
     localStorage.setItem(DRIVER_KEY,JSON.stringify(s));
     try{if(typeof state!=='undefined')state.driverShift=s;if(typeof persist==='function')persist()}catch(_){}
     if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync();
