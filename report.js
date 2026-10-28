@@ -77,7 +77,7 @@ function write(k,v){localStorage.setItem(k,JSON.stringify(v))}
 function money(n){return (Math.round((Number(n)||0)*100)/100).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' BYN'}
 function escape(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function nowGame(){const s=read('conductor_driver_shift_v1',null);if(s&&s.gameStartTime){const p=s.gameStartTime.split(':').map(Number),base=(p[0]||0)*60+(p[1]||0),started=Number(s.realStartedAt||Date.parse(s.startedAt)||Date.now()),m=(base+Math.max(0,Math.floor((Date.now()-started)/60000)))%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')}return 'не задано'}
-function shiftMeta(){let m=read(KEY,null);if(!m){m={id:'shift_'+Date.now(),startedAt:new Date().toISOString(),gameStartTime:nowGame()};write(KEY,m)}return m}
+function shiftMeta(){let m=read(KEY,null);const cashId=localStorage.getItem('conductor_current_shift_id');const active=localStorage.getItem('conductor_shift_active')==='true';if(!m||(active&&cashId&&m.cashShiftId!==cashId)){m={id:'report_'+(cashId||Date.now()),cashShiftId:cashId||null,startedAt:new Date().toISOString(),gameStartTime:nowGame()};write(KEY,m)}return m}
 function ensureShift(){if(localStorage.getItem('conductor_shift_active')==='true')return shiftMeta();return read(KEY,null)||shiftMeta()}
 function tickets(){return read('conductor_tickets',[])}
 function sales(){return read('ticket_excursion_buffet_sales_v1',[])}
