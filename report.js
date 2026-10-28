@@ -13,9 +13,9 @@ function archiveCurrentShift(cashShiftIdOverride){
  const existing=read(ARCHIVES_KEY,[]);
  const driver=read('conductor_driver_shift_v1',null)||{};
  const meta=read(KEY,null)||{};
- const id=meta.id||('shift_'+(driver.realStartedAt||Date.now()));
- const previousIndex=existing.findIndex(a=>a.id===id);
  const cashShiftId=cashShiftIdOverride||localStorage.getItem('conductor_current_shift_id');
+ const id=(meta.cashShiftId===cashShiftId&&meta.id)?meta.id:('report_'+(cashShiftId||driver.realStartedAt||Date.now()));
+ const previousIndex=existing.findIndex(a=>a.id===id);
  const allTickets=tickets(),taggedTickets=allTickets.filter(t=>t.reportShiftId===id||(cashShiftId&&t.shiftId===cashShiftId));
  const allSales=sales(),taggedSales=allSales.filter(s=>s.reportShiftId===id);
  const finishedAt=new Date().toISOString(),startedAt=driver.startedAt||meta.startedAt||finishedAt;
