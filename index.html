@@ -1080,7 +1080,7 @@ function fmtTime(d){return d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'
 function parseMinutes(v){const [h,m]=String(v||'00:00').split(':').map(Number);return (h||0)*60+(m||0);}
 function timeFromMinutes(m){m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(Math.round(m%60)).padStart(2,'0');}
 function buildTimes(r,dep,arr){const n=(r.stops||[]).length;if(!n)return[];const a=parseMinutes(dep),b=parseMinutes(arr);let diff=b-a;if(diff<0)diff+=1440;return r.stops.map((_,i)=>timeFromMinutes(a+diff*(i/Math.max(1,n-1))));}
-function save(){const stamp=new Date().toISOString();if(state.driverShift&&typeof state.driverShift==='object')state.driverShift.updatedAt=stamp;localStorage.setItem(KEY,JSON.stringify(state.driverShift||null));localStorage.setItem('conductor_shift_state_updated_at',stamp);if(typeof persist==='function')persist();if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync();}
+function save(){const stamp=new Date().toISOString();if(state.driverShift&&typeof state.driverShift==='object')state.driverShift.updatedAt=stamp;localStorage.setItem(KEY,JSON.stringify(state.driverShift||null));if(typeof persist==='function')persist();if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync();}
 function current(){return state.driverShift&&state.driverShift.active?state.driverShift:null;}
 function populateRoutes(){
  const type=$('shiftTransportType')?.value, sel=$('shiftRouteSelect');if(!sel)return;
