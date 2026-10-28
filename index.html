@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"><meta name="theme-color" content="#007aff"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Кондуктор"><link rel="manifest" href="./manifest.webmanifest"><title>Терминал Кондуктора Pro — Компактная Печать</title><style>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"><meta name="theme-color" content="#466ce5"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Кондуктор"><link rel="manifest" href="./manifest.webmanifest"><title>Терминал Кондуктора Pro — Компактная Печать</title><style>
 :root{--bg-main:#f4f7fb;--bg-card:rgba(255,255,255,.62);--bg-input:rgba(255,255,255,.72);--border-color:rgba(255,255,255,.82);--accent-cyan:#007aff;--accent-cyan-hover:#0066d6;--accent-green:#20a464;--accent-green-hover:#16834e;--accent-orange:#f59e0b;--accent-red:#e53935;--text-primary:#172033;--text-secondary:#657087;--ticket-bg:#fff;--ticket-text:#000}*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',Roboto,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}body{background:radial-gradient(circle at 10% 0%,rgba(0,122,255,.12),transparent 32%),radial-gradient(circle at 90% 10%,rgba(120,90,255,.10),transparent 30%),linear-gradient(135deg,#f8fbff,#edf2f8);background-attachment:fixed;color:var(--text-primary);min-height:100vh;padding:12px;display:flex;flex-direction:column;align-items:center}.top-status-bar,.tabs-nav,.main-layout{width:100%;max-width:1200px}.top-status-bar{background:var(--bg-card);border:1px solid var(--border-color);border-radius:18px;backdrop-filter:blur(22px) saturate(150%);padding:12px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}.status-title{display:flex;align-items:center;gap:10px;font-size:1.1rem;font-weight:700;color:var(--accent-cyan)}.status-info{display:flex;align-items:center;gap:16px;font-size:.85rem;color:var(--text-secondary)}.badge{padding:4px 8px;border-radius:6px;font-weight:600;font-size:.75rem;text-transform:uppercase}.badge-active{background:rgba(16,185,129,.2);color:var(--accent-green);border:1px solid var(--accent-green)}.badge-closed{background:rgba(239,68,68,.2);color:var(--accent-red);border:1px solid var(--accent-red)}.tabs-nav{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}.tab-btn{background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-color);padding:10px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:.9rem;white-space:nowrap;transition:all .2s;display:flex;align-items:center;gap:6px}.tab-btn.active{background:var(--accent-cyan);color:#fff;border-color:var(--accent-cyan)}.tab-btn:hover:not(.active){background:rgba(0,122,255,.1);color:var(--text-primary)}.main-layout{display:grid;grid-template-columns:1fr 340px;gap:18px}@media(max-width:880px){.main-layout{grid-template-columns:1fr}}.tab-content{display:none}.tab-content.active{display:block}.card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:18px;backdrop-filter:blur(22px) saturate(150%);padding:18px;margin-bottom:16px;box-shadow:0 10px 35px rgba(30,50,80,.10),inset 0 1px 0 rgba(255,255,255,.8)}.card-title{font-size:1.1rem;color:var(--accent-cyan);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}.form-group{margin-bottom:12px}.form-group.full-width{grid-column:1/-1}label{display:block;font-size:.8rem;color:var(--text-secondary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}input[type=text],input[type=number],select,textarea{width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid rgba(180,190,205,.35);border-radius:12px;backdrop-filter:blur(14px);color:var(--text-primary);font-size:.95rem;outline:none;transition:border-color .2s}input:focus,select:focus,textarea:focus{border-color:var(--accent-cyan)}.btn{padding:11px 16px;border:none;border-radius:8px;font-weight:700;font-size:.9rem;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;justify-content:center;gap:8px}.btn-cyan{background:var(--accent-cyan);color:#fff}.btn-cyan:hover{background:var(--accent-cyan-hover)}.btn-green{background:var(--accent-green);color:#fff}.btn-green:hover{background:var(--accent-green-hover)}.btn-orange{background:var(--accent-orange);color:#fff}.btn-red{background:var(--accent-red);color:#fff}.btn-outline{background:transparent;border:1px solid var(--border-color);color:var(--text-primary)}.btn-outline:hover{border-color:var(--accent-cyan);color:var(--accent-cyan)}.btn-block{width:100%}.preview-sticky{position:sticky;top:12px}.ticket-wrapper{display:flex;flex-direction:column;align-items:center}.ticket-paper{background:var(--ticket-bg);color:var(--ticket-text);width:58mm;min-height:auto;padding:8px 6px;font-family:'Courier New',Courier,monospace;font-size:11px;line-height:1.2;box-shadow:0 6px 20px rgba(0,0,0,.12);border-radius:2px;white-space:pre-wrap;word-break:break-word;margin-bottom:14px;position:relative;transition:width .2s ease}.ticket-paper:after{content:"";position:absolute;bottom:-6px;left:0;width:100%;height:6px;background:radial-gradient(circle,transparent,transparent 50%,var(--bg-card) 50%,var(--bg-card) 100%);background-size:8px 12px}.quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}.quick-card{background:var(--bg-input);border:1px solid var(--border-color);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s}.quick-card:hover{border-color:var(--accent-cyan);transform:translateY(-2px)}.quick-card-title{font-weight:700;font-size:.95rem;color:var(--accent-cyan)}.quick-card-price{font-size:1.2rem;font-weight:800;margin-top:4px;color:var(--accent-green)}.table-responsive{width:100%;overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:.85rem;text-align:left}th,td{padding:10px 12px;border-bottom:1px solid var(--border-color)}th{background:var(--bg-input);color:var(--text-secondary);font-weight:600}tr:hover{background:rgba(255,255,255,.05)}@media print{body *{visibility:hidden}.ticket-paper,.ticket-paper *{visibility:visible}.ticket-paper{position:absolute;left:0;top:0;width:58mm!important;padding:1mm!important;box-shadow:none!important;margin:0!important}.ticket-paper:after{display:none}body.print-buffet-receipt *{visibility:hidden!important}body.print-buffet-receipt #buffetReceiptText,body.print-buffet-receipt #buffetReceiptText *{visibility:visible!important}body.print-buffet-receipt #buffetReceiptText{position:absolute;left:0;top:0;width:48mm!important;max-width:48mm!important;padding:1mm!important;margin:0!important;white-space:pre-wrap!important;overflow-wrap:anywhere;font:10px/1.15 Courier New,monospace!important;box-shadow:none!important}body.print-buffet-receipt .ticket-paper{visibility:hidden!important}body.print-buffet-receipt #buffetReceiptText{background:#fff!important;color:#000!important}@page{size:58mm auto;margin:0}}
 #ticketReportPaper{width:48mm;max-width:100%;margin:0 auto;background:#fff;color:#000;padding:2mm;font:10px/1.2 "Courier New",monospace;white-space:normal;overflow-wrap:anywhere}
 #ticketReportPaper .rp-center{text-align:center}#ticketReportPaper .rp-line{border-top:1px dashed #000;margin:5px 0}
@@ -63,7 +63,210 @@ body{overflow-x:hidden}
  #tab-routes .table-responsive{margin-right:0}
  .tabs-nav{max-width:100%;overscroll-behavior-x:contain}
 }
-</style></style></head><body>
+</style></style><style id="site-liquid-glass-redesign-v1">
+/* Site-wide Liquid Glass refresh. Keeps existing IDs, event handlers and checkout logic intact. */
+:root{
+  --bg-main:#f3f6fc;--bg-card:rgba(255,255,255,.78);--bg-input:rgba(255,255,255,.92);
+  --border-color:rgba(151,169,202,.24);--accent-cyan:#466ce5;--accent-cyan-hover:#3457c9;
+  --accent-green:#16845c;--accent-green-hover:#116b4a;--accent-orange:#c78621;--accent-red:#d94b5b;
+  --text-primary:#18253d;--text-secondary:#71809a;--ticket-bg:#fff;--ticket-text:#000;
+  --site-shadow:0 18px 48px rgba(36,56,99,.075);--site-ring:0 0 0 4px rgba(70,108,229,.13)
+}
+html{scroll-behavior:smooth;scroll-padding-top:110px}
+body{padding:16px;gap:0;background:
+  radial-gradient(ellipse at 4% 0%,rgba(86,133,255,.15),transparent 34%),
+  radial-gradient(ellipse at 96% 4%,rgba(88,205,174,.11),transparent 28%),
+  linear-gradient(145deg,#f8faff 0%,#eff3fa 55%,#f5f8fc 100%);
+  background-attachment:fixed;color:var(--text-primary);font-size:14px}
+.top-status-bar,.tabs-nav,.main-layout{width:100%;max-width:1500px}
+.top-status-bar{position:relative;padding:15px 20px;margin-bottom:13px;border:1px solid rgba(255,255,255,.9);
+  border-radius:22px;background:rgba(255,255,255,.72);backdrop-filter:blur(24px) saturate(155%);
+  -webkit-backdrop-filter:blur(24px) saturate(155%);box-shadow:0 14px 38px rgba(36,56,99,.075),inset 0 1px 0 rgba(255,255,255,.95)}
+.status-title{gap:12px;font-size:1.02rem;font-weight:850;letter-spacing:-.025em;color:#203451}
+.status-title>span:first-child{display:inline-flex;align-items:center;gap:8px}
+.status-info{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;font-size:.78rem;color:#75829a}
+.status-info>div{padding:8px 10px;background:rgba(246,249,255,.85);border:1px solid rgba(164,181,210,.2);border-radius:12px;white-space:nowrap}
+.status-info strong{color:#273b5b;font-weight:850;font-variant-numeric:tabular-nums}
+#liveClock{font-weight:850;color:#4568d7;font-variant-numeric:tabular-nums}
+.badge{padding:6px 10px;border-radius:999px;font-size:.66rem;font-weight:850;letter-spacing:.045em;border:1px solid transparent}
+.badge-active{background:#e4f7ef;color:#137b57;border-color:#b9e7d4}
+.badge-closed{background:#fff0f1;color:#b34150;border-color:#f2cbd0}
+.tabs-nav{position:sticky;top:8px;z-index:100;display:flex;align-items:center;gap:6px;padding:7px;margin:0 0 18px;
+  overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:rgba(139,157,193,.36) transparent;
+  border:1px solid rgba(255,255,255,.92);border-radius:19px;background:rgba(247,250,255,.82);
+  backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);
+  box-shadow:0 10px 28px rgba(34,53,93,.065)}
+.tabs-nav::-webkit-scrollbar{height:5px}.tabs-nav::-webkit-scrollbar-thumb{background:rgba(139,157,193,.34);border-radius:99px}
+.tab-btn{flex:0 0 auto;min-height:41px;padding:10px 14px;border:1px solid transparent;border-radius:13px;
+  background:transparent;color:#697891;font-size:.81rem;font-weight:780;letter-spacing:-.01em;gap:7px;
+  transition:background .18s ease,color .18s ease,border-color .18s ease,transform .18s ease,box-shadow .18s ease}
+.tab-btn:hover:not(.active){background:rgba(225,234,250,.68);color:#304768;border-color:rgba(164,183,215,.25);transform:translateY(-1px)}
+.tab-btn.active{background:linear-gradient(135deg,#4b70e8,#3659ca);color:#fff;border-color:rgba(68,96,200,.8);
+  box-shadow:0 6px 16px rgba(58,88,201,.23),inset 0 1px 0 rgba(255,255,255,.22)}
+.tabs-nav a.tab-btn{border-radius:13px}
+.main-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(270px,320px);gap:18px;align-items:start}
+.left-column,.right-column,.tab-content{min-width:0}
+.tab-content{animation:siteTabEnter .22s ease both}
+@keyframes siteTabEnter{from{opacity:.72;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.tab-content:not(#tab-reports)::before{display:block;margin:0 0 13px;padding:3px 2px;color:#203451;
+  font-size:clamp(1.22rem,2vw,1.62rem);line-height:1.2;font-weight:900;letter-spacing:-.045em}
+#tab-terminal::before{content:"Продажа билетов"}
+#tab-driverShift::before{content:"Рабочая смена"}
+#tab-routes::before{content:"Маршруты и остановки"}
+#tab-shift::before{content:"Кассовая смена и Z-отчёт"}
+#tab-operations::before{content:"Билеты и журнал операций"}
+#tab-qrTickets::before{content:"QR-билеты"}
+#tab-buffet::before{content:"Мини-буфет"}
+#tab-settings::before{content:"Настройки терминала"}
+.card{padding:clamp(16px,2vw,23px);margin-bottom:16px;border:1px solid rgba(255,255,255,.92);border-radius:22px;
+  background:linear-gradient(145deg,rgba(255,255,255,.88),rgba(247,250,255,.76));
+  backdrop-filter:blur(22px) saturate(145%);-webkit-backdrop-filter:blur(22px) saturate(145%);
+  box-shadow:0 14px 40px rgba(34,53,93,.065),inset 0 1px 0 rgba(255,255,255,.94);
+  transition:border-color .18s ease,box-shadow .18s ease}
+.card:hover{border-color:rgba(173,191,226,.45)}
+.card-title{display:flex;align-items:center;gap:10px;margin-bottom:17px;padding-bottom:12px;
+  border-bottom:1px solid rgba(157,174,204,.18);color:#263d61;font-size:1rem;font-weight:850;letter-spacing:-.025em}
+.card-title>span:first-child{min-width:0}
+.form-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:13px}
+.form-group{min-width:0;margin-bottom:14px}
+label{margin-bottom:7px;color:#6c7b95;font-size:.72rem;font-weight:800;letter-spacing:.075em;text-transform:uppercase}
+input[type=text],input[type=number],input[type=time],input[type=date],input[type=datetime-local],input[type=search],input[type=email],input[type=password],select,textarea{
+  display:block;width:100%;min-width:0;min-height:43px;padding:11px 12px;border:1px solid rgba(164,181,210,.48);border-radius:12px;
+  background:rgba(255,255,255,.86);color:#263956;font-size:.9rem;box-shadow:inset 0 1px 2px rgba(35,53,87,.025);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);outline:none;
+  transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
+textarea{line-height:1.5;resize:vertical}
+input::placeholder,textarea::placeholder{color:#a0aabe}
+input:hover,select:hover,textarea:hover{border-color:rgba(128,154,205,.65);background:#fff}
+input:focus,select:focus,textarea:focus{border-color:#7294ed;box-shadow:var(--site-ring);background:#fff}
+input:disabled,select:disabled,textarea:disabled{opacity:.7;background:#eef2f8;cursor:not-allowed}
+small{line-height:1.45}
+.btn{min-height:41px;padding:10px 15px;border:1px solid transparent;border-radius:12px;font-size:.83rem;font-weight:800;
+  letter-spacing:-.01em;box-shadow:0 2px 5px rgba(27,44,79,.035);transition:transform .15s ease,box-shadow .15s ease,filter .15s ease}
+.btn:hover{filter:brightness(1.025);transform:translateY(-1px);box-shadow:0 7px 17px rgba(33,53,94,.12)}
+.btn:active{transform:translateY(0) scale(.99);box-shadow:none}
+.btn:focus-visible,.tab-btn:focus-visible{outline:3px solid rgba(91,127,226,.35);outline-offset:2px}
+.btn-cyan{background:linear-gradient(135deg,#5278ed,#3b60d1);color:#fff}
+.btn-cyan:hover{background:linear-gradient(135deg,#476ce0,#3155c6)}
+.btn-green{background:linear-gradient(135deg,#1b996b,#147b56);color:#fff}
+.btn-green:hover{background:linear-gradient(135deg,#16885e,#106d4b)}
+.btn-orange{background:linear-gradient(135deg,#e5a53e,#ca8120);color:#fff}
+.btn-red{background:linear-gradient(135deg,#e45e6b,#c94253);color:#fff}
+.btn-outline{border-color:rgba(153,172,207,.43);background:rgba(255,255,255,.66);color:#536681}
+.btn-outline:hover{border-color:#9eb5eb;background:#f6f9ff;color:#355acb}
+.btn:disabled,.btn[disabled]{opacity:.5;cursor:not-allowed;filter:none;transform:none;box-shadow:none}
+.ops-actions{gap:8px}
+.mini-btn{border-radius:9px}
+.quick-grid{gap:12px}
+.quick-card{padding:17px;border:1px solid rgba(159,178,211,.3);border-radius:17px;background:linear-gradient(145deg,rgba(255,255,255,.92),rgba(244,248,255,.82));box-shadow:0 7px 22px rgba(32,52,89,.045)}
+.quick-card:hover{border-color:#a7bced;background:#fff;box-shadow:0 12px 28px rgba(44,71,129,.1)}
+.quick-card-title{color:#3d5fc0;font-size:.88rem}
+.quick-card-price{color:#167b56;font-size:1.25rem;font-weight:900;font-variant-numeric:tabular-nums}
+.feature-grid{gap:12px}
+.feature-stat{padding:16px;border:1px solid rgba(159,178,211,.3);border-radius:16px;background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(243,247,255,.82));box-shadow:0 6px 19px rgba(35,54,91,.04)}
+.feature-stat b{font-size:1.08rem;color:#2a4166;letter-spacing:-.025em}
+.shift-time-grid{gap:12px}
+.shift-time-card{padding:16px;border:1px solid rgba(159,178,211,.28);border-radius:16px;background:linear-gradient(145deg,#fff,#f2f6fd);box-shadow:0 7px 20px rgba(39,58,94,.04)}
+.shift-time-card span{font-size:.75rem;font-weight:800;letter-spacing:.045em;text-transform:uppercase;color:#7b8aa3}
+.shift-time-card strong{font-size:1.45rem;color:#29436d;font-variant-numeric:tabular-nums}
+.table-responsive{border:1px solid rgba(157,176,210,.23);border-radius:15px;background:rgba(255,255,255,.52)}
+table{font-size:.82rem;color:#354661;border-collapse:separate;border-spacing:0}
+th,td{padding:12px 13px;border-bottom:1px solid rgba(151,171,206,.18)}
+th{position:sticky;top:0;background:rgba(239,244,253,.96);color:#71809a;font-size:.69rem;text-transform:uppercase;letter-spacing:.055em;font-weight:850}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:rgba(224,234,252,.4)}
+td{vertical-align:middle;line-height:1.4}
+.table-responsive tr:first-child th:first-child{border-top-left-radius:14px}
+.table-responsive tr:first-child th:last-child{border-top-right-radius:14px}
+.ticket-wrapper{padding:19px 14px;gap:8px}
+.ticket-paper{border:1px solid rgba(35,51,77,.08);border-radius:5px;box-shadow:0 11px 28px rgba(25,37,59,.16)}
+.preview-sticky{top:88px}
+#tab-terminal .card:first-of-type{background:linear-gradient(145deg,rgba(255,255,255,.92),rgba(243,248,255,.84))}
+#tab-terminal #stopControlPanel,#tab-terminal #pendingSalesBox{border-radius:14px}
+#tab-routes .form-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))}
+#tab-routes .table-responsive{margin-top:10px}
+#tab-routes .route-actions,#tab-routes .ops-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#tab-operations .status-active{display:inline-flex;padding:4px 8px;border-radius:999px;background:#e2f6ed;color:#147b56}
+#tab-operations .status-cancelled{display:inline-flex;padding:4px 8px;border-radius:999px;background:#fff0f1;color:#bb4350}
+#tab-shift .feature-stat,#tab-driverShift .feature-stat{min-height:82px}
+#tab-buffet .card,#tab-qrTickets .card,#tab-settings .card{background:linear-gradient(145deg,rgba(255,255,255,.91),rgba(246,249,255,.78))}
+#tab-buffet button,#tab-qrTickets button{border-radius:12px}
+#tab-buffet input,#tab-buffet select,#tab-buffet textarea,#tab-qrTickets input,#tab-qrTickets select{border-radius:12px}
+#tab-settings .form-group{margin-bottom:16px}
+#tab-settings .btn-red{background:linear-gradient(135deg,#dc5c6a,#c54151)}
+#tab-settings input[type=file]{max-width:100%}
+#cashRegisterModal{background:rgba(16,28,50,.42);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px)}
+.cash-register-dialog,.cash-dialog,.refund-dialog{border:1px solid rgba(255,255,255,.95);border-radius:25px;background:rgba(249,251,255,.96);box-shadow:0 28px 90px rgba(18,35,68,.3)}
+.cash-register-title{font-size:1.08rem;color:#203756}
+.cash-register-box{border:1px solid rgba(159,178,211,.24);border-radius:15px;background:rgba(255,255,255,.76)}
+.cash-register-total{color:#26436e;font-variant-numeric:tabular-nums}
+.cash-key{border:1px solid rgba(167,183,211,.18);border-radius:14px;background:#f2f5fb;color:#334866;transition:transform .13s,background .13s}
+.cash-key:hover{background:#e7eefb}
+.cash-key.op{background:#e5edff;color:#395dc9}
+.cash-key.equal{background:linear-gradient(135deg,#5278ed,#3b60d1);color:#fff}
+.cash-info div{border:1px solid rgba(162,180,210,.2);background:rgba(255,255,255,.8)}
+.sync-dot{width:8px;height:8px;box-shadow:0 0 0 3px rgba(32,164,100,.09)}
+#tab-reports .report-ui{font-size:14px}
+#tab-reports::before{content:none!important}
+@media(max-width:1080px){
+  body{padding:12px}
+  .main-layout{grid-template-columns:minmax(0,1fr) 285px;gap:13px}
+  .top-status-bar{align-items:flex-start}.status-info{gap:6px}
+  .status-info>div{padding:7px 8px}
+  .tabs-nav{top:5px}
+  .tab-btn{padding:9px 11px}
+}
+@media(max-width:850px){
+  .main-layout{grid-template-columns:minmax(0,1fr)}
+  .right-column{display:grid;grid-template-columns:minmax(0,1fr);min-width:0}
+  .preview-sticky{position:static}
+  .top-status-bar{gap:12px}
+  .status-info{justify-content:flex-start}
+}
+@media(max-width:600px){
+  body{padding:8px}
+  .top-status-bar{padding:13px;border-radius:18px;align-items:flex-start;flex-direction:column}
+  .status-title{font-size:.9rem;flex-wrap:wrap}
+  .status-info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:7px}
+  .status-info>div{min-width:0;white-space:normal;padding:8px;border-radius:11px}
+  .tabs-nav{top:4px;margin-bottom:14px;padding:5px;border-radius:15px;gap:4px}
+  .tab-btn{min-height:39px;padding:9px 11px;border-radius:11px;font-size:.76rem}
+  .main-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+  .tab-content:not(#tab-reports)::before{margin:0 0 10px 2px;font-size:1.28rem}
+  .card{padding:14px;margin-bottom:12px;border-radius:18px}
+  .card-title{font-size:.93rem;margin-bottom:14px;padding-bottom:10px}
+  .form-grid{grid-template-columns:minmax(0,1fr);gap:9px}
+  .form-group{margin-bottom:10px}
+  input[type=text],input[type=number],input[type=time],input[type=date],input[type=datetime-local],input[type=search],select,textarea{min-height:44px;font-size:16px}
+  .btn{min-height:43px;padding:10px 12px;font-size:.81rem}
+  .ops-actions{display:flex;gap:7px}
+  .ops-actions .btn{flex:1 1 auto}
+  .feature-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .feature-stat{padding:12px}
+  .feature-stat b{font-size:1rem}
+  .shift-time-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+  .shift-time-card{padding:10px 6px}
+  .shift-time-card strong{font-size:1.12rem}
+  .shift-time-card span{font-size:.64rem;letter-spacing:0}
+  .table-responsive{border-radius:12px}
+  th,td{padding:10px 9px}
+  .right-column{display:block}
+  .ticket-wrapper{padding:13px 9px}
+  .ticket-paper{max-width:100%}
+  .cash-register-dialog,.cash-dialog,.refund-dialog{padding:15px;border-radius:20px}
+}
+@media(max-width:390px){
+  .status-info{grid-template-columns:minmax(0,1fr)}
+  .feature-grid,.shift-time-grid{grid-template-columns:minmax(0,1fr)}
+  .shift-time-card{display:flex;justify-content:space-between;align-items:center;text-align:left}
+  .shift-time-card strong{margin-top:0}
+  .report-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*:before,*:after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+</head><body>
 <div class="top-status-bar"><div class="status-title"><span>📠 ТЕРМИНАЛ КОНДУКТОРА</span><span id="shiftBadge" class="badge badge-closed">СМЕНА ЗАКРЫТА</span></div><div class="status-info"><div>Транспорт: <strong id="currentTransportLabel">Узкоколейная ЖД</strong></div><div>Продано билетов: <strong id="totalShiftTickets">0</strong></div><div>Выручка: <strong id="totalShiftRevenue">0.00 BYN</strong></div><div><span id="liveClock">00:00:00</span></div></div></div>
 <div class="tabs-nav"><button class="tab-btn" onclick="switchTab('driverShift',this)">🚌 Смена</button><button class="tab-btn active" onclick="switchTab('terminal',this)">🎟️ Выпуск Билета</button><button class="tab-btn" onclick="switchTab('routes',this)">🗺️ Конструктор Маршрутов</button><button class="tab-btn" onclick="switchTab('shift',this)">📜 Журнал & Z-Отчёт</button><button class="tab-btn" onclick="switchTab('operations',this)">🎫 Билеты и Операции</button><button class="tab-btn" onclick="switchTab('qrTickets',this)">📷 QR-талон</button><button class="tab-btn" onclick="switchTab('buffet',this)">🛍️ Мини-буфет</button><button class="tab-btn" onclick="switchTab('reports',this)">🧾 Отчёты</button><button class="tab-btn" onclick="switchTab('settings',this)">⚙️ Настройки Терминала</button><a class="tab-btn" href="./card-terminal.html" style="text-decoration:none;background:#1677ff;color:#fff;border-color:#1677ff">💳 Виртуальный терминал</a></div>
 <div class="main-layout"><div class="left-column">
