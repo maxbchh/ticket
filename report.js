@@ -41,7 +41,6 @@
   function storeShift(s){
     if(!s)return;
     s.updatedAt=new Date().toISOString();
-    localStorage.setItem('conductor_shift_state_updated_at',s.updatedAt);
     localStorage.setItem(DRIVER_KEY,JSON.stringify(s));
     try{if(typeof state!=='undefined')state.driverShift=s;if(typeof persist==='function')persist()}catch(_){}
     if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync();
