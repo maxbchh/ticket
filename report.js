@@ -83,6 +83,7 @@
   function belongs(row,s,archive,kind){
     const id=String((archive&&archive.id)||(s&&s.reportId)||''), rowId=String(row.driverShiftReportId||'');
     if(id&&rowId===id)return true;
+    if(id&&rowId&&rowId!==id)return false;
     const trip=(archive&&archive.tripId)||tripId(s), rowTrip=row.reportTripId||row.tripId||row.currentTripId||row.driverTripId||null;
     if(trip&&rowTrip&&String(trip)===String(rowTrip))return true;
     if(archive&&archive.reportVersion>=2){
