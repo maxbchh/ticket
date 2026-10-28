@@ -1,0 +1,10 @@
+(function(){
+'use strict';
+const KEY='ticket_virtual_system_v1';
+function read(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return{}}}
+function addButton(){const bar=document.querySelector('.top-status-bar');if(!bar||document.getElementById('ticketVirtualPosButton'))return;const b=document.createElement('button');b.id='ticketVirtualPosButton';b.className='btn btn-cyan';b.type='button';b.textContent='💳 Виртуальный терминал';b.onclick=()=>window.open('./card-terminal.html','ticketVirtualPos','noopener');bar.appendChild(b)}
+function notice(p){if(!p||p.status!=='approved'||!p.id)return;const last=localStorage.getItem('ticket_virtual_pos_last_notice');if(last===p.id)return;localStorage.setItem('ticket_virtual_pos_last_notice',p.id);let box=document.getElementById('ticketVirtualPosNotice');if(!box){box=document.createElement('div');box.id='ticketVirtualPosNotice';box.style.cssText='position:fixed;z-index:99999;right:14px;top:14px;max-width:min(380px,calc(100vw - 28px));padding:16px 18px;border-radius:16px;background:#e5f8ee;color:#125b3d;border:1px solid #9ad9b8;box-shadow:0 12px 34px #163b282b;font:600 15px system-ui';document.body.appendChild(box)}box.innerHTML='✓ Оплата виртуальной картой прошла успешно<br><span style="font-size:13px;font-weight:500">Сумма: '+Number(p.amount||0).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' BYN · Карта: '+String(p.cardName||'Виртуальная карта').replace(/[&<>"]/g,'')+'</span><button type="button" style="display:block;margin-top:10px;border:0;border-radius:8px;padding:7px 11px;background:#137b55;color:white;font-weight:700" id="ticketVirtualPosNoticeClose">Закрыть</button>';box.querySelector('button').onclick=()=>box.remove();setTimeout(()=>box.remove(),12000)}
+function check(){const s=read();notice(s.pending)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{addButton();check()});else{addButton();check()}
+window.addEventListener('storage',e=>{if(e.key===KEY)check()});setInterval(()=>{addButton();check()},2000);
+})();
