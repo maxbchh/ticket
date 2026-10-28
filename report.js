@@ -406,8 +406,8 @@
     return result;
   });
   wrap('completeBuffetPayment',original=>function(){
-    const result=original.apply(this,arguments);
-    try{const s=shift();if(s&&s.reportId){const rows=sales();rows.forEach(v=>{if(!v.time&&!v.createdAt)v.time=new Date().toISOString();if(!v.reportTripId&&tripId(s))v.reportTripId=String(tripId(s))});localStorage.setItem(BUFFET_KEY,JSON.stringify(rows));tagRows(s)}requestRender()}catch(e){console.error('Не удалось привязать товар к водительской смене:',e)}
+    const before=new Set(sales().map(saleKey)),result=original.apply(this,arguments);
+    try{const s=shift();if(s&&s.reportId){const rows=sales();rows.forEach(v=>{if(!before.has(saleKey(v))&&!v.time&&!v.createdAt)v.time=new Date().toISOString();if(!before.has(saleKey(v))&&!v.reportTripId&&tripId(s))v.reportTripId=String(tripId(s))});localStorage.setItem(BUFFET_KEY,JSON.stringify(rows));tagRows(s)}requestRender()}catch(e){console.error('Не удалось привязать товар к водительской смене:',e)}
     return result;
   });
   wrap('switchTab',original=>function(tabId){
