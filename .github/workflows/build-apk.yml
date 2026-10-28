@@ -31,10 +31,20 @@ jobs:
         run: |
           rm -rf www
           mkdir -p www
-          cp index.html www/index.html
-          cp cloud-sync.js www/cloud-sync.js
-          cp manifest.webmanifest www/manifest.webmanifest
-          cp sw.js www/sw.js
+          cp ./*.js ./*.html ./*.webmanifest ./manifest.json ./manifest.webmanifest www/ 2>/dev/null || true
+          test -f www/index.html
+          test -f www/cloud-sync.js
+          test -f www/qr-sales.js
+          test -f www/report.js
+          test -f www/route-payment-qr.js
+          test -f www/buffet-design.js
+          test -f www/buffet-cashier.js
+          test -f www/shift-sync.js
+          test -f www/card-bridge.js
+          test -f www/qr-pay.html
+          test -f www/qr-ticket.html
+          test -f www/card-terminal.html
+          node -e "const fs=require('fs');const h=fs.readFileSync('www/index.html','utf8');const refs=[...h.matchAll(/(?:src|href)=['\\\"]\\.\\/([^'\\\"]+)/g)].map(x=>x[1]).filter(x=>/\\.(?:js|html|webmanifest)$/.test(x));const miss=refs.filter(x=>!fs.existsSync('www/'+x));if(miss.length){console.error('Missing web assets:',miss.join(', '));process.exit(1)}"
 
       - name: Create Android project
         run: npx cap add android
