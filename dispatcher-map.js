@@ -264,18 +264,8 @@
   function init() {
     if (!$('dispatcherApp')) return;
     bindUI(); renderRouteList(); renderEditPanel(); renderDispatchRouteOptions();
-    const oldRoutes = routes;
-    if (!routes.length) {
-      // Start centered on the whole urban area; user can immediately create routes.
-      const starter = { id: id(), name: 'Маршрут 1', stops: [], updatedAt: new Date().toISOString() };
-      routes.push(starter); editRouteId = starter.id; persist(); renderRouteList(); renderEditPanel(); renderDispatchRouteOptions();
-    }
     if (!editRouteId && routes.length) editRouteId = routes[0].id;
     renderRouteList(); renderEditPanel();
-    document.addEventListener('click', e => {
-      const b = e.target.closest('.tab-btn');
-      if (b && (b.getAttribute('onclick') || '').includes('dispatcher')) setTimeout(() => { initEditMap(); initDispatchMap(); if (editMap) editMap.invalidateSize(); if (dispatchMap) dispatchMap.invalidateSize(); }, 120);
-    });
   }
   window.TicketDispatcher = {
     retryMaps() {
@@ -283,6 +273,14 @@
       const a = $('dispatcherEditMap'), b = $('dispatcherLiveMap');
       if (a) a.innerHTML = ''; if (b) b.innerHTML = '';
       editMap = dispatchMap = null; initEditMap(); initDispatchMap();
+    },
+    show(tabId) {
+      if (tabId === 'mapConstructor') initEditMap();
+      if (tabId === 'dispatcher') initDispatchMap();
+      setTimeout(() => {
+        if (tabId === 'mapConstructor' && editMap) { editMap.invalidateSize(); drawEditRoute(); }
+        if (tabId === 'dispatcher' && dispatchMap) { dispatchMap.invalidateSize(); renderDispatchMap(); }
+      }, 180);
     },
     refresh() { routes = loadRoutes(); renderRouteList(); renderEditPanel(); renderDispatchRouteOptions(); drawEditRoute(); },
     selectEditRoute
