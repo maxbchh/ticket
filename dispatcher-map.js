@@ -6,7 +6,7 @@
   const $ = id => document.getElementById(id);
   let editMap = null, dispatchMap = null, editMarkers = [], editLine = null;
   let dispatchMarkers = [], dispatchLine = null, busMarker = null, playbackTimer = null, playbackIndex = 0;
-  let editRouteId = '', addingStops = true, leafletPromise = null;
+  let editRouteId = '', addingStops = true, leafletPromise = null, editRouteRenderToken = 0, dispatchRouteRenderToken = 0;
   let routes = loadRoutes();
 
   function loadRoutes() {
@@ -90,9 +90,17 @@
     if (line) { try { map.removeLayer(line); } catch (_) {} }
     return null;
   }
+  function roadGeometry(points) {
+    if (!Array.isArray(points) || points.length < 2) return Promise.resolve(null);
+    const coords = points.map(p => Number(p[1]) + ',' + Number(p[0])).join(';');
+    const url = 'https://router.project-osrm.org/route/v1/driving/' + coords + '?overview=full&geometries=geojson&steps=false';
+    return fetch(url, { mode: 'cors' }).then(r => { if (!r.ok) throw new Error('routing unavailable'); return r.json(); })
+      .then(data => data && data.code === 'Ok' && data.routes && data.routes[0] ? data.routes[0].geometry.coordinates.map(p => [p[1], p[0]]) : null);
+  }
   function drawEditRoute() {
     if (!editMap || !$('dispatcherEditMap')) return;
     editLine = removeLayers(editMap, editMarkers, editLine);
+    const routeToken = ++editRouteRenderToken;
     const r = currentEditRoute();
     if (!r) return;
     const points = [];
@@ -106,7 +114,15 @@
       });
       editMarkers.push(marker); points.push([s.lat, s.lng]);
     });
-    if (points.length > 1) editLine = L.polyline(points, { color: '#1677ff', weight: 5, opacity: .85 }).addTo(editMap);
+    if (points.length > 1) {
+      const style = { color: '#1677ff', weight: 5, opacity: .85 };
+      editLine = L.polyline(points, style).addTo(editMap);
+      roadGeometry(points).then(road => {
+        if (!road || routeToken !== editRouteRenderToken || !editMap) return;
+        if (editLine) editMap.removeLayer(editLine);
+        editLine = L.polyline(road, style).addTo(editMap);
+      }).catch(() => {});
+    }
     if (points.length) editMap.fitBounds(L.latLngBounds(points).pad(.18), { maxZoom: 15 });
     setTimeout(() => editMap && editMap.invalidateSize(), 80);
   }
@@ -190,6 +206,7 @@
   function renderDispatchMap() {
     if (!dispatchMap) return;
     dispatchMarkers = removeLayers(dispatchMap, dispatchMarkers, dispatchLine);
+    const routeToken = ++dispatchRouteRenderToken;
     if (busMarker) { dispatchMap.removeLayer(busMarker); busMarker = null; }
     const r = chosenDispatchRoute();
     const status = $('dispatcherVehicleStatus');
@@ -201,7 +218,15 @@
       marker.bindPopup('<strong>' + (i + 1) + '. ' + esc(s.name) + '</strong><br>Прибытие: ' + esc(s.arrival || '—') + '<br>Отправление: ' + esc(s.departure || '—'));
       dispatchMarkers.push(marker); pts.push([s.lat, s.lng]);
     });
-    if (pts.length > 1) dispatchLine = L.polyline(pts, { color: '#16a56b', weight: 5, opacity: .9, dashArray: '10 7' }).addTo(dispatchMap);
+    if (pts.length > 1) {
+      const style = { color: '#16a56b', weight: 5, opacity: .9, dashArray: '10 7' };
+      dispatchLine = L.polyline(pts, style).addTo(dispatchMap);
+      roadGeometry(pts).then(road => {
+        if (!road || routeToken !== dispatchRouteRenderToken || !dispatchMap) return;
+        if (dispatchLine) dispatchMap.removeLayer(dispatchLine);
+        dispatchLine = L.polyline(road, style).addTo(dispatchMap);
+      }).catch(() => {});
+    }
     if (pts.length) dispatchMap.fitBounds(L.latLngBounds(pts).pad(.18), { maxZoom: 15 });
     if (status) status.textContent = r.name + ' · ' + r.stops.length + ' остановок · учебный режим';
     renderDispatchSchedule();
