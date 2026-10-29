@@ -240,7 +240,7 @@
     const tab=$('tab-reports');if(!tab)return false;installStyles();tab.innerHTML='';
     root=document.createElement('div');root.className='report-ui';
     root.innerHTML=[
-      '<div class="report-hero"><div class="report-hero-top"><div><div class="report-eyebrow">Transport operations / reporting</div><h2>Общий Z-отчёт кассовой смены</h2><p>Один общий отчёт по билетам, возвратам и выручке только за открытую кассовую смену. Старые продажи в новый отчёт не попадают.</p></div><div class="report-shift-pill" id="reportShiftStatus">Проверка смены…</div></div><div class="report-actions"><button type="button" class="report-action primary" data-action="print">🖨️ Печать отчёта</button><button type="button" class="report-action" data-action="refresh">↻ Обновить</button><button type="button" class="report-action" data-action="manual">✍️ Создать отчёт вручную</button></div></div>',
+      '<div class="report-hero"><div class="report-hero-top"><div><div class="report-eyebrow">Transport operations / reporting</div><h2>Общий Z-отчёт кассовой смены</h2><p>Один общий отчёт по билетам, возвратам и выручке только за открытую кассовую смену. Старые продажи в новый отчёт не попадают.</p></div><div class="report-shift-pill" id="reportShiftStatus">Проверка смены…</div></div><div class="report-actions"><button type="button" class="report-action primary" data-action="print">🖨️ Печать отчёта</button><button type="button" class="report-action" data-action="refresh">↻ Обновить</button><button type="button" class="report-action" data-action="manual" style="display:none">✍️ Создать отчёт вручную</button></div></div>',
       '<div class="report-pending" id="reportPendingNotice" hidden><div><strong>Сохранён завершённый отчёт</strong><span id="reportPendingText">Он ждёт печати.</span></div><button type="button" class="report-action success" data-action="print-pending">Распечатать смену</button></div>',
       '<div class="report-grid"><aside class="report-sidebar">',
       '<section class="report-glass report-panel" style="display:none"><div class="report-panel-title"><span>Общий Z-отчёт</span><span class="report-subtitle" id="reportArchiveCount">0 отчётов</span></div><div class="report-history" id="reportHistory"></div></section>',
@@ -377,7 +377,7 @@
   function saveDetails(){
     const ctx=context(),con=$('reportConductorSurname').value.trim(),drv=$('reportDriverSurname').value.trim(),msg=$('reportMessage').value.trim();
     if(ctx.archive){const list=archives(),i=list.findIndex(a=>String(a.id)===String(ctx.archive.id));if(i>=0){list[i].conductorSurname=con;list[i].driverSurname=drv;list[i].reportMessage=msg;list[i].driverShift=Object.assign({},list[i].driverShift||{},{conductorSurname:con,driverSurname:drv,reportMessage:msg});saveArchives(list)}}
-    else if(ctx.shift&&ctx.shift.reportId){ctx.shift.conductorSurname=con;ctx.shift.driverSurname=drv;ctx.shift.reportMessage=msg;storeShift(ctx.shift)}
+    else if(ctx.shift&&ctx.shift.reportId){if(ctx.shift.cashShiftId){write('ticket_z_report_details_v1',{conductorSurname:con,driverSurname:drv,reportMessage:msg})}else{ctx.shift.conductorSurname=con;ctx.shift.driverSurname=drv;ctx.shift.reportMessage=msg;storeShift(ctx.shift)}}
     else{alert('Начни водительскую смену или выбери архивный отчёт.');return}
     render();
   }
