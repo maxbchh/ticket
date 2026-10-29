@@ -99,7 +99,7 @@
     return Array.from(map.values());
   }
   function liveData(s){
-    if(s&&s.cashShiftId){const id=String(s.cashShiftId);return {tickets:tickets().filter(t=>String(t.shiftId||t.cashShiftId||'')===id),buffet:sales().filter(v=>String(v.shiftId||v.cashShiftId||'')===id)}}
+    if(s&&s.cashShiftId&&String(s.reportId||'')===String(s.cashShiftId)&&String(s.routeName||'')==='Общая кассовая смена'){const id=String(s.cashShiftId);return {tickets:tickets().filter(t=>String(t.shiftId||t.cashShiftId||'')===id),buffet:sales().filter(v=>String(v.shiftId||v.cashShiftId||'')===id)}}
     tagRows(s);
     return {tickets:tickets().filter(t=>belongs(t,s,null,'ticket')),buffet:sales().filter(v=>belongs(v,s,null,'sale'))};
   }
