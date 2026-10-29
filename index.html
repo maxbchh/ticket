@@ -1149,7 +1149,7 @@ window.finishDriverShift=function(){
 const oldOpenShift=window.openShift;
 window.openShift=function(){if(current()){alert('Сначала завершите текущую смену водителя/кондуктора.');return}oldOpenShift();render()};
 const oldCloseShift=window.closeShift;
-window.closeShift=function(){if(current()&&!confirm('Смена на маршруте ещё идёт. Закрыть кассовую смену всё равно?'))return;oldCloseShift()};
+window.closeShift=function(){const running=current();if(running&&!confirm('Водительская смена ещё идёт. Завершить её сейчас на текущей остановке, сохранить отчёт и закрыть кассовую смену?'))return;if(running&&typeof window.finishDriverShift==='function'){window.finishDriverShift();if(current())return}oldCloseShift()};
 document.addEventListener('change',e=>{if(e.target?.id==='shiftTransportType')populateRoutes();if(e.target?.id==='shiftRouteSelect')updateRouteInfo()});
 window.addEventListener('load',()=>{let saved=null;try{saved=JSON.parse(localStorage.getItem(KEY)||'null')}catch(_){}if(saved&&typeof saved==='object')state.driverShift=saved;window.renderDriverShift=render;populateRoutes();render()});
 })();
