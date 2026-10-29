@@ -16,8 +16,8 @@
   function shift(){return read(DRIVER_KEY,null)}
   function tickets(){const x=read(TICKETS_KEY,[]);return Array.isArray(x)?x:[]}
   function sales(){const x=read(BUFFET_KEY,[]);return Array.isArray(x)?x:[]}
-  function archives(){const x=read(ARCHIVES_KEY,[]);return Array.isArray(x)?x:[]}
-  function saveArchives(list){write(ARCHIVES_KEY,list.slice(-100))}
+  function archives(){const z=read('ticket_z_report_v1',null);return z&&typeof z==='object'?[z]:[]}
+  function saveArchives(list){const z=read('ticket_z_report_v1',null);if(z){const u=(list||[]).find(x=>String(x.id)===String(z.id));if(u)write('ticket_z_report_v1',u)}write(ARCHIVES_KEY,(list||[]).slice(-1))}
   function ticketKey(t){return String((t&&(t.num??t.number??t.id??t.purchaseId))??JSON.stringify(t||{}))}
   function saleKey(s){return String((s&&(s.id??s.saleId??s.purchaseId))??[s&&s.name,s&&s.time,s&&s.total,s&&s.quantity].join('|'))}
   function tripId(s){return (s&&(s.tripId||s.reportTripId||s.currentTripId))||null}
@@ -99,6 +99,7 @@
     return Array.from(map.values());
   }
   function liveData(s){
+    if(s&&s.cashShiftId){const id=String(s.cashShiftId);return {tickets:tickets().filter(t=>String(t.shiftId||t.cashShiftId||'')===id),buffet:sales().filter(v=>String(v.shiftId||v.cashShiftId||'')===id)}}
     tagRows(s);
     return {tickets:tickets().filter(t=>belongs(t,s,null,'ticket')),buffet:sales().filter(v=>belongs(v,s,null,'sale'))};
   }
@@ -239,14 +240,14 @@
     const tab=$('tab-reports');if(!tab)return false;installStyles();tab.innerHTML='';
     root=document.createElement('div');root.className='report-ui';
     root.innerHTML=[
-      '<div class="report-hero"><div class="report-hero-top"><div><div class="report-eyebrow">Transport operations / reporting</div><h2>Отчёты водительских смен</h2><p>Каждый завершённый рейс сохраняется отдельно. В отчёт попадают только билеты и дополнительные продажи, относящиеся к выбранной водительской смене.</p></div><div class="report-shift-pill" id="reportShiftStatus">Проверка смены…</div></div><div class="report-actions"><button type="button" class="report-action primary" data-action="print">🖨️ Печать отчёта</button><button type="button" class="report-action" data-action="refresh">↻ Обновить</button><button type="button" class="report-action" data-action="manual">✍️ Создать отчёт вручную</button></div></div>',
+      '<div class="report-hero"><div class="report-hero-top"><div><div class="report-eyebrow">Transport operations / reporting</div><h2>Общий Z-отчёт кассовой смены</h2><p>Один общий отчёт по билетам, возвратам и выручке только за открытую кассовую смену. Старые продажи в новый отчёт не попадают.</p></div><div class="report-shift-pill" id="reportShiftStatus">Проверка смены…</div></div><div class="report-actions"><button type="button" class="report-action primary" data-action="print">🖨️ Печать отчёта</button><button type="button" class="report-action" data-action="refresh">↻ Обновить</button><button type="button" class="report-action" data-action="manual">✍️ Создать отчёт вручную</button></div></div>',
       '<div class="report-pending" id="reportPendingNotice" hidden><div><strong>Сохранён завершённый отчёт</strong><span id="reportPendingText">Он ждёт печати.</span></div><button type="button" class="report-action success" data-action="print-pending">Распечатать смену</button></div>',
       '<div class="report-grid"><aside class="report-sidebar">',
-      '<section class="report-glass report-panel"><div class="report-panel-title"><span>Архив смен</span><span class="report-subtitle" id="reportArchiveCount">0 отчётов</span></div><div class="report-history" id="reportHistory"></div></section>',
+      '<section class="report-glass report-panel" style="display:none"><div class="report-panel-title"><span>Общий Z-отчёт</span><span class="report-subtitle" id="reportArchiveCount">0 отчётов</span></div><div class="report-history" id="reportHistory"></div></section>',
       '<section class="report-glass report-panel"><div class="report-panel-title">Реквизиты смены</div><div class="report-info-list" id="reportShiftInfo"></div><div class="report-muted-note" id="reportScopeNote">Отчёт создаётся по завершении водительской смены.</div></section>',
       '<section class="report-glass report-panel"><div class="report-panel-title">Подписи и примечание</div><div class="report-form-grid"><div class="report-field"><label for="reportConductorSurname">Фамилия кондуктора</label><input id="reportConductorSurname" autocomplete="off" placeholder="Фамилия"></div><div class="report-field"><label for="reportDriverSurname">Фамилия водителя</label><input id="reportDriverSurname" autocomplete="off" placeholder="Фамилия"></div><div class="report-field" style="grid-column:1/-1"><label for="reportMessage">Сообщение / примечание</label><textarea id="reportMessage" rows="2" placeholder="Необязательное примечание"></textarea></div></div><div style="display:flex;justify-content:flex-end;margin-top:10px"><button type="button" class="report-action" data-action="save-details">Сохранить реквизиты</button></div></section>',
       '</aside><main class="report-main">',
-      '<div class="report-main-heading"><div><small id="reportKicker">СВОДКА ПРОДАЖ</small><h3 id="reportHeading">Текущая водительская смена</h3></div><button type="button" class="report-action" data-action="select-current" id="reportCurrentButton">Текущая смена</button></div>',
+      '<div class="report-main-heading"><div><small id="reportKicker">СВОДКА ПРОДАЖ</small><h3 id="reportHeading">Общий Z-отчёт</h3></div><button type="button" class="report-action" data-action="select-current" id="reportCurrentButton" style="display:none">Текущая смена</button></div>',
       '<div class="report-metrics"><div class="report-metric"><div class="report-metric-label">Продано билетов</div><div class="report-metric-value" id="reportMetricTickets">0</div><div class="report-metric-hint" id="reportMetricTicketHint">Без аннулированных</div></div><div class="report-metric"><div class="report-metric-label">Выручка от билетов</div><div class="report-metric-value money" id="reportMetricTicketRevenue">0,00 BYN</div><div class="report-metric-hint">После возвратов</div></div><div class="report-metric"><div class="report-metric-label">Продано товаров</div><div class="report-metric-value" id="reportMetricProducts">0</div><div class="report-metric-hint" id="reportMetricProductHint">Дополнительные продажи</div></div><div class="report-metric"><div class="report-metric-label">Итого за смену</div><div class="report-metric-value money" id="reportMetricTotal">0,00 BYN</div><div class="report-metric-hint">Билеты + товары − возвраты</div></div></div>',
       '<div id="reportWarnings"></div><div class="report-detail-grid"><section class="report-glass report-panel"><div class="report-panel-title">Билеты по остановкам</div><div id="reportStopsBreakdown"></div></section><section class="report-glass report-panel"><div class="report-panel-title">Категории билетов</div><div id="reportTypesBreakdown"></div></section><section class="report-glass report-panel"><div class="report-panel-title">Способы оплаты</div><div id="reportPaymentsBreakdown"></div><div class="report-muted-note" id="reportPaymentNote"></div></section><section class="report-glass report-panel"><div class="report-panel-title">Дополнительные продажи</div><div id="reportGoodsBreakdown"></div></section></div>',
       '<section class="report-glass report-panel"><div class="report-panel-title">Маршрут и отметки времени</div><div id="reportTimeline"></div></section><section id="ticketReportPaper"></section></main></div>',
@@ -261,8 +262,12 @@
     return true;
   }
   function orderedArchives(){return archives().slice().sort((a,b)=>(Date.parse(b.finishedAt||b.startedAt||0)||0)-(Date.parse(a.finishedAt||a.startedAt||0)||0))}
-  function activeShift(){const s=shift();return s&&s.active?s:null}
-  function initialSelect(){if(activeShift()){selectedArchiveId='';return}const all=orderedArchives(),a=all.find(x=>!x.printedAt)||all[0];selectedArchiveId=a?String(a.id):''}
+  function activeShift(){
+    if(localStorage.getItem('conductor_shift_active')!=='true')return null;
+    const id=localStorage.getItem('conductor_current_shift_id');if(!id)return null;
+    return {reportId:String(id),cashShiftId:String(id),startedAt:localStorage.getItem('conductor_shift_started_at')||new Date().toISOString(),active:true,transport:'bus',routeName:'Общая кассовая смена',vehicleNumber:'',vehicleNo:'',stops:[],gameStartTime:''};
+  }
+  function initialSelect(){if(activeShift()){selectedArchiveId='';return}const all=orderedArchives(),a=all[0];selectedArchiveId=a?String(a.id):''}
   function txt(id,value){const e=$(id);if(e)e.textContent=value==null?'':String(value)}
   function history(ctx){
     const host=$('reportHistory'),list=orderedArchives();txt('reportArchiveCount',list.length+' отчёт(ов)');
@@ -284,7 +289,7 @@
     const s=ctx.shift||{},a=ctx.archive,starts=a?a.startedAt:s.startedAt,ends=a?a.finishedAt:(s.finishedAt||new Date().toISOString()),printed=new Date();
     const st=Array.from(stats.byStop.entries()).sort((x,y)=>y[1].sum-x[1].sum),types=Array.from(stats.byType.entries()).sort((x,y)=>y[1].sum-x[1].sum),goods=Array.from(stats.goods.entries()).sort((x,y)=>y[1].sum-x[1].sum);
     const line=(label,value)=>'<div class="rp-row"><span>'+esc(label)+'</span><b>'+esc(value)+'</b></div>';
-    let html='<div class="rp-center"><b>ОТЧЁТ ВОДИТЕЛЬСКОЙ СМЕНЫ</b></div><div class="rp-transport">'+esc(v.type+' №'+v.vehicleNo+' · '+v.model+' · '+v.routeName)+'</div><div class="rp-line"></div><div>Начало: '+esc(date(starts))+'</div><div>Окончание: '+esc(date(ends))+'</div><div>Игровое время: '+esc((a&&a.gameTimeAtFinish)||s.gameTimeAtFinish||gameTime(s,ends))+'</div><div>Время печати: '+esc(printed.toLocaleString('ru-RU'))+'</div><div class="rp-line"></div><b>БИЛЕТЫ</b><div>Продано: '+esc(stats.ticketCount)+' шт.</div>';
+    let html='<div class="rp-center"><b>ОБЩИЙ Z-ОТЧЁТ</b></div><div class="rp-transport">'+esc(v.type+' №'+v.vehicleNo+' · '+v.model+' · '+v.routeName)+'</div><div class="rp-line"></div><div>Начало: '+esc(date(starts))+'</div><div>Окончание: '+esc(date(ends))+'</div><div>Игровое время: '+esc((a&&a.gameTimeAtFinish)||s.gameTimeAtFinish||gameTime(s,ends))+'</div><div>Время печати: '+esc(printed.toLocaleString('ru-RU'))+'</div><div class="rp-line"></div><b>БИЛЕТЫ</b><div>Продано: '+esc(stats.ticketCount)+' шт.</div>';
     html+=st.length?st.map(([name,r])=>'<div>'+esc(r.qty)+' × '+esc(name)+' — '+esc(money(r.sum))+'</div>').join(''):'<div>Продаж нет</div>';
     html+='<div class="rp-line"></div><b>КАТЕГОРИИ</b>'+(types.length?types.map(([name,r])=>'<div>'+esc(r.qty)+' × '+esc(name)+'</div>').join(''):'<div>Нет данных</div>');
     html+='<div class="rp-line"></div><b>ТОВАРЫ</b><div>Количество: '+esc(stats.goodsCount)+' шт.</div>'+(goods.length?goods.map(([name,r])=>'<div>'+esc(r.qty)+' × '+esc(name)+' — '+esc(money(r.sum))+'</div>').join(''):'<div>Нет продаж товаров</div>');
@@ -298,12 +303,12 @@
     return html;
   }
   function context(){
+    const liveShift=activeShift();
+    if(liveShift){selectedArchiveId='';return {archive:null,shift:liveShift,data:liveData(liveShift),live:true}}
     const all=archives(),a=selectedArchiveId?all.find(x=>String(x.id)===String(selectedArchiveId)):null;
     if(a)return {archive:a,shift:a.driverShift||{},data:archiveData(a),live:false};
-    const s=activeShift();
-    if(s){const ready=ensureMetadata(s,false);return {archive:null,shift:ready,data:liveData(ready),live:true}}
-    if(!selectedArchiveId&&all.length){initialSelect();return context()}
-    return {archive:null,shift:shift()||{},data:{tickets:[],buffet:[]},live:false};
+    if(!selectedArchiveId&&all.length){initialSelect();const chosen=all.find(x=>String(x.id)===String(selectedArchiveId));if(chosen)return {archive:chosen,shift:chosen.driverShift||{},data:archiveData(chosen),live:false}}
+    return {archive:null,shift:{},data:{tickets:[],buffet:[]},live:false};
   }
   function render(){
     if(!root)return;
@@ -427,14 +432,14 @@
   });
   function boot(){
     if(!installUI())return;
-    const s=shift();if(s&&s.active){const ready=ensureMetadata(s,false);if(!ready.tripId&&read(TRIP_KEY,null))ready.tripId=String(read(TRIP_KEY,null));storeShift(ready);selectedArchiveId='';tagRows(ready)}else initialSelect();
+    if(activeShift())selectedArchiveId='';else initialSelect();
     render();
     window.TicketReports={refresh,print:printReport,openManual,cancelManual:()=>{$('reportManualEditor').hidden=true;$('reportManualEditor').dataset.keepOpen=''},saveManual,selectArchive:id=>{selectedArchiveId=String(id||'');render()},setMode:refresh,markPrinted};
     window.addEventListener('focus',refresh);
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh()});
     window.addEventListener('load',refresh,{once:true});
     window.addEventListener('afterprint',()=>{if(document.body.classList.contains('print-ticket-report'))document.body.classList.remove('print-ticket-report')});
-    setInterval(()=>{const s=shift();if(s&&s.active){tagRows(s);if($('tab-reports')&&$('tab-reports').classList.contains('active'))requestRender()}},3000);
+    setInterval(()=>{if(activeShift()&&$('tab-reports')&&$('tab-reports').classList.contains('active'))requestRender()},3000);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
