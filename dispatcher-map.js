@@ -52,7 +52,7 @@
     if (el) el.innerHTML = '<div class="dmap-error">Не удалось загрузить интерактивную карту.<br>' + esc(error && error.message || 'Проверьте интернет-соединение.') + '<br><button class="btn btn-outline" type="button" onclick="TicketDispatcher.retryMaps()">Повторить</button></div>';
   }
   function baseMap(elId) {
-    const map = L.map(elId, { zoomControl: true, preferCanvas: true }).setView(TVER, 11);
+    const map = L.map(elId, { zoomControl: true, preferCanvas: true }).setView(TVER, 10);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
     }).addTo(map);
