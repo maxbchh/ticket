@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f2f6ff">
+<title>Диспетчерская карта — Тикет</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+:root{--ink:#1c2d49;--muted:#71809a;--blue:#4772e8;--line:rgba(144,165,207,.27);--glass:rgba(255,255,255,.84);--shadow:0 18px 50px rgba(35,55,98,.12)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);background:radial-gradient(ellipse at 7% 0%,#e4edff 0,transparent 35%),linear-gradient(145deg,#f8faff,#eef3fb)}
+button,input,select,textarea{font:inherit}button{cursor:pointer}
+.app{max-width:1800px;margin:auto;padding:14px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:15px 19px;border:1px solid #fff;border-radius:22px;background:rgba(255,255,255,.77);backdrop-filter:blur(22px);box-shadow:var(--shadow);margin-bottom:12px}
+.brand{display:flex;align-items:center;gap:12px;font-weight:850;letter-spacing:-.03em}.brand-icon{width:42px;height:42px;display:grid;place-items:center;background:linear-gradient(135deg,#4778f2,#8a94f4);border-radius:15px;color:white;font-size:21px;box-shadow:0 8px 18px #5576e733}.brand small{display:block;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-top:3px}
+.top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.status-chip{padding:8px 11px;border-radius:99px;background:#e7f7ef;color:#187751;font-size:12px;font-weight:800;border:1px solid #c7eedc}
+.btn{border:1px solid transparent;border-radius:12px;padding:10px 13px;font-size:13px;font-weight:800;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:7px}.btn:hover{transform:translateY(-1px);box-shadow:0 7px 18px #304a8017}.primary{background:linear-gradient(135deg,#527bf0,#3d61d0);color:white}.secondary{background:rgba(255,255,255,.86);color:#3b5277;border-color:var(--line)}.danger{background:#fff0f1;color:#b53f50;border-color:#f3d0d4}.green{background:linear-gradient(135deg,#20a777,#15875d);color:#fff}.small{padding:7px 9px;border-radius:9px;font-size:12px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:13px;align-items:stretch}
+.map-shell{min-width:0;position:relative;border:1px solid #fff;border-radius:22px;overflow:hidden;box-shadow:var(--shadow);background:#d9e6f1;min-height:calc(100vh - 118px)}
+.map-head{position:absolute;z-index:500;left:12px;top:12px;right:12px;pointer-events:none;display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.map-caption{pointer-events:auto;background:rgba(255,255,255,.91);backdrop-filter:blur(15px);padding:11px 14px;border:1px solid #fff;border-radius:14px;box-shadow:0 5px 20px #263b6512}.map-caption strong{display:block;font-size:14px}.map-caption span{display:block;color:var(--muted);font-size:11px;margin-top:4px}.map-tags{display:flex;gap:5px;flex-wrap:wrap;pointer-events:auto}.map-tag{font-size:11px;font-weight:750;padding:8px 10px;border-radius:99px;border:1px solid #fff;background:rgba(255,255,255,.86);backdrop-filter:blur(12px)}
+#map{position:absolute;inset:0;width:100%;height:100%;min-height:calc(100vh - 118px)}
+#map.add-stop-mode{cursor:crosshair}
+.leaflet-control-attribution{font-size:10px!important;background:rgba(255,255,255,.83)!important}
+.panel{display:flex;flex-direction:column;gap:10px;min-width:0}
+.mode-tabs{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;border:1px solid #fff;border-radius:15px;background:rgba(255,255,255,.75);box-shadow:0 7px 20px #304a8010}
+.mode-tab{border:0;border-radius:11px;padding:11px 7px;background:transparent;color:var(--muted);font-weight:850;font-size:12px}.mode-tab.active{background:linear-gradient(135deg,#5179ee,#6f86ed);color:#fff;box-shadow:0 5px 14px #5876df35}
+.card{padding:15px;border:1px solid #fff;border-radius:19px;background:var(--glass);backdrop-filter:blur(18px);box-shadow:0 10px 30px #304a800b;min-width:0}
+.card-title{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px;font-weight:900;letter-spacing:-.02em;margin-bottom:13px}.eyebrow{font-size:10px;color:var(--muted);font-weight:850;letter-spacing:.09em;text-transform:uppercase}
+.field{margin-bottom:11px;min-width:0}.field:last-child{margin-bottom:0}.field label{display:block;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:850;margin-bottom:6px}.field input,.field select,.field textarea{width:100%;border:1px solid rgba(147,168,209,.36);background:rgba(255,255,255,.92);border-radius:11px;padding:10px 11px;color:var(--ink);outline:none;min-height:40px}.field input:focus,.field select:focus,.field textarea:focus{border-color:#7292ee;box-shadow:0 0 0 3px #6688ec1c}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}.row{display:flex;gap:7px;flex-wrap:wrap}.row>.btn{flex:1}
+.muted{color:var(--muted);font-size:12px;line-height:1.45}.notice{padding:10px 11px;border-radius:12px;background:#edf3ff;border:1px solid #dae5ff;font-size:11px;color:#51668f;line-height:1.45}.warning{background:#fff7e8;border-color:#f5e2b7;color:#876322}
+.stop-list{display:flex;flex-direction:column;gap:8px;max-height:42vh;overflow:auto;padding-right:2px}.stop-card{padding:10px;border:1px solid rgba(146,166,205,.24);border-radius:13px;background:rgba(255,255,255,.8)}.stop-card.selected{border-color:#819bee;box-shadow:0 0 0 3px #6487ee13}.stop-top{display:flex;gap:7px;align-items:center}.stop-number{flex:0 0 25px;width:25px;height:25px;border-radius:9px;background:#e7edff;color:#3e60c8;font-size:11px;font-weight:900;display:grid;place-items:center}.stop-top input{min-width:0;flex:1;border:1px solid transparent;background:transparent;font-size:12px;font-weight:850;padding:6px;border-radius:7px}.stop-top input:focus{background:#fff;border-color:#a5b9ee;outline:none}.stop-actions{display:flex;gap:4px}.icon-btn{border:1px solid var(--line);border-radius:8px;background:#fff;color:#60708b;padding:5px 7px;font-size:11px;font-weight:900}.stop-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px}.stop-meta label{font-size:9px!important;margin:0!important}.stop-meta input{width:100%;margin-top:4px;padding:7px;border:1px solid rgba(147,168,209,.28);border-radius:8px;background:#fff;font-size:11px}.stop-note{width:100%;margin-top:6px;padding:7px;border:1px solid rgba(147,168,209,.24);border-radius:8px;font-size:11px;background:#fff}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px}table{border-collapse:collapse;width:100%;font-size:11px}th,td{padding:9px 8px;text-align:left;border-bottom:1px solid #e8edf6;white-space:nowrap}th{background:#f2f5fc;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em}tbody tr:last-child td{border-bottom:0}.dispatch-banner{padding:13px;border:1px solid #dbe5ff;background:linear-gradient(130deg,#edf3ff,#f7f9ff);border-radius:15px}.dispatch-banner strong{display:block;font-size:15px}.dispatch-banner span{display:block;color:#71809a;font-size:11px;margin-top:4px}.dispatch-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.bus-pin{font-size:25px;filter:drop-shadow(0 3px 3px #1a315744);width:34px;height:34px;display:grid;place-items:center;background:#fff;border:2px solid #4772e8;border-radius:12px}
+.stop-pin{background:#fff;border:2px solid #4772e8;border-radius:50%;width:19px;height:19px;box-shadow:0 2px 7px #172b5540;position:relative}.stop-pin:after{content:"";position:absolute;inset:4px;background:#4772e8;border-radius:50%}.leaflet-tooltip.stop-label{border:1px solid #d7e1f3;border-radius:8px;padding:4px 7px;background:rgba(255,255,255,.94);box-shadow:0 3px 9px #2c426416;color:#2d4163;font-weight:800;font-size:11px}.leaflet-tooltip.stop-label:before{display:none}
+.empty{padding:18px 12px;text-align:center;border:1px dashed #c9d5e9;border-radius:12px;color:var(--muted);font-size:12px;line-height:1.5}
+.modal-backdrop{position:fixed;z-index:2000;inset:0;background:#1b2d4a55;backdrop-filter:blur(7px);display:none;align-items:center;justify-content:center;padding:16px}.modal-backdrop.open{display:flex}.modal{width:min(440px,100%);padding:18px;border-radius:22px;border:1px solid #fff;background:rgba(250,252,255,.97);box-shadow:0 30px 90px #172b5540}.modal h2{font-size:17px;margin:0 0 5px}.modal p{font-size:12px;color:var(--muted);margin:0 0 15px}
+.footer-note{text-align:center;color:#8491a6;font-size:10px;line-height:1.4;padding:4px 10px 10px}
+body.dispatch-mode .builder-only{display:none!important}body:not(.dispatch-mode) .dispatch-only{display:none!important}
+@media(max-width:1000px){.layout{grid-template-columns:minmax(0,1fr) 330px}.app{padding:9px}.map-shell,#map{min-height:calc(100vh - 125px)}}@media(max-width:760px){.layout{grid-template-columns:1fr}.map-shell{min-height:62vh;order:1}.panel{order:2}#map{min-height:62vh}.app{padding:7px}.top{padding:12px;border-radius:17px}.brand{font-size:14px}.top-actions{width:100%}.top-actions .btn{flex:1}.stop-list{max-height:none}.card{padding:12px;border-radius:16px}.map-head{left:8px;top:8px;right:8px}.map-caption{padding:9px 10px}.map-tag{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top">
+ <div class="brand"><div class="brand-icon">⌖</div><div>Тикет <small>Карта города · диспетчерский центр</small></div></div>
+ <div class="top-actions"><span id="saveStatus" class="status-chip">● Локально сохранено</span><a class="btn secondary" href="./index.html" style="text-decoration:none">← Вернуться в Тикет</a><a class="btn secondary" target="_blank" rel="noopener" href="https://yandex.ru/maps/?ll=35.9176%2C56.8587&z=11&l=map" style="text-decoration:none">Открыть в Яндекс Картах ↗</a></div>
+</header>
+<div class="layout">
+ <section class="map-shell">
+  <div class="map-head"><div class="map-caption"><strong>Тверь и окрестности</strong><span>Город, СНТ и пригородные зоны · масштаб можно менять</span></div><div class="map-tags"><div class="map-tag">СНТ «Берёзка»</div><div class="map-tag">СНТ «Светлый»</div><div class="map-tag">Леруа Мерлен</div><div class="map-tag">Хэппилэнд</div><div class="map-tag">мкр. Максим</div></div></div>
+  <div id="map" aria-label="Интерактивная карта Твери"></div>
+ </section>
+ <aside class="panel">
+  <div class="mode-tabs"><button id="builderMode" class="mode-tab active" type="button">✎ Конструктор</button><button id="dispatchMode" class="mode-tab" type="button">▣ Диспетчерская</button></div>
+  <section class="card builder-only">
+   <div class="card-title"><span>Маршрут</span><span class="eyebrow" id="routeCount">0 маршрутов</span></div>
+   <div class="field"><label>Выбрать сохранённый маршрут</label><select id="routePicker"><option value="">Пока нет маршрутов</option></select></div>
+   <div class="field"><label>Название маршрута</label><input id="routeName" type="text" maxlength="80" placeholder="Например, маршрут № 7"></div>
+   <div class="grid2">
+    <div class="field"><label>Транспорт</label><select id="routeType"><option>Автобус</option><option>Троллейбус</option><option>Трамвай</option><option>Маршрутка</option><option>Игровой поезд</option></select></div>
+    <div class="field"><label>Цена, BYN</label><input id="routeFare" type="number" min="0" step="0.01" value="0.50"></div>
+   </div>
+   <div class="row"><button id="newRoute" class="btn primary" type="button">＋ Новый маршрут</button><button id="saveRoute" class="btn secondary" type="button">Сохранить</button></div>
+   <div class="row" style="margin-top:7px"><button id="deleteRoute" class="btn danger" type="button">Удалить маршрут</button><button id="zoomRoute" class="btn secondary" type="button">⌖ Показать маршрут</button></div>
+   <div id="routeSummary" class="muted" style="margin-top:9px">Создай маршрут, затем добавляй остановки кликами по карте.</div>
+  </section>
+  <section class="card builder-only">
+   <div class="card-title"><span>Остановки и расписание</span><span id="stopCount" class="eyebrow">0 остановок</span></div>
+   <div class="notice">Нажми «Добавить остановку», затем укажи её место на карте. Остановки можно переименовывать, двигать по порядку, удалять и задавать время прибытия/отправления.</div>
+   <button id="addStopMode" class="btn primary" style="width:100%;margin:10px 0" type="button">＋ Добавить остановку на карте</button>
+   <div id="stopList" class="stop-list"><div class="empty">Сначала создай маршрут.</div></div>
+  </section>
+  <section class="card dispatch-only">
+   <div class="card-title"><span>Рейс на линии</span><span class="eyebrow">Игровой режим</span></div>
+   <div class="field"><label>Маршрут</label><select id="dispatchRoute"><option value="">Выбери маршрут</option></select></div>
+   <div class="field"><label>Скорость симуляции</label><select id="travelSpeed"><option value="30">30 секунд на перегон</option><option value="15" selected>15 секунд на перегон</option><option value="8">8 секунд на перегон</option></select></div>
+   <div id="dispatchBanner" class="dispatch-banner"><strong>Нет активного рейса</strong><span>Выбери сохранённый маршрут и нажми «Начать рейс».</span></div>
+   <div class="dispatch-actions" style="margin-top:9px"><button id="startTrip" class="btn green" type="button">▶ Начать рейс</button><button id="stopTrip" class="btn secondary" type="button">Ⅱ Пауза</button><button id="prevStop" class="btn secondary" type="button">← Предыдущая</button><button id="nextStop" class="btn primary" type="button">Следующая →</button></div>
+   <div id="dispatchProgress" class="muted" style="margin-top:10px">Движение автобуса пока не запущено.</div>
+   <div class="notice warning" style="margin-top:10px">Важно: это игровой диспетчерский режим. Положение автобуса симулируется на карте и не является GPS-слежением или официальным городским расписанием.</div>
+  </section>
+  <section class="card dispatch-only">
+   <div class="card-title"><span>Расписание маршрута</span><span class="eyebrow" id="scheduleCount">0 остановок</span></div>
+   <div id="scheduleTable" class="table-wrap"><div class="empty">Сначала создай маршрут и добавь остановки.</div></div>
+   <p class="muted" style="margin-top:8px">Расписание редактируется в «Конструкторе». Изменения сохраняются и здесь, и в разделе диспетчерской.</p>
+  </section>
+  <section class="card">
+   <div class="card-title">Подсказки <span class="eyebrow">Карта</span></div>
+   <div class="muted">Карта открывается на Твери с широким охватом города и окрестностей. Масштабируй её кнопками или колёсиком. Маршруты и остановки сохраняются в браузере и синхронизируются с облаком Тикета, когда оно доступно.</div>
+   <div class="notice" style="margin-top:9px">Карта сейчас использует OpenStreetMap: для рисования своих объектов API-ключ не нужен. Встроенная интерактивная карта Яндекса с пользовательскими метками требует ключ разработчика.</div>
+  </section>
+  <div class="footer-note">Данные маршрутов — игровые. Названия остановок и времена задаются вручную.</div>
+ </aside>
+</div>
+</div>
+<div id="stopModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="stopModalTitle">
+ <form id="stopForm" class="modal">
+  <h2 id="stopModalTitle">Новая остановка</h2><p id="stopCoords">Точка на карте выбрана.</p>
+  <div class="field"><label>Название остановки</label><input id="stopNameInput" required maxlength="100" placeholder="Например, Хэппилэнд"></div>
+  <div class="grid2"><div class="field"><label>Прибытие</label><input id="stopArrivalInput" type="time"></div><div class="field"><label>Отправление</label><input id="stopDepartureInput" type="time"></div></div>
+  <div class="field"><label>Примечание</label><input id="stopNoteInput" maxlength="160" placeholder="По требованию, конечная…"></div>
+  <div class="row"><button class="btn primary" type="submit">Сохранить остановку</button><button id="cancelStopModal" class="btn secondary" type="button">Отмена</button></div>
+ </form>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(function(){
+'use strict';
+const STORAGE_KEY='conductor_dispatcher_v1';
+const CLOUD_URL='https://ubhfigqpsepnpokrbdyo.supabase.co/rest/v1/ticket_shared_state';
+const CLOUD_KEY='sb_publishable_yN8W8pvQq8hWsYMO8z1Rzw_6zKQ-8D1';
+const $=id=>document.getElementById(id);
+const uid=()=>('r'+Date.now().toString(36)+Math.random().toString(36).slice(2,8));
+const nowISO=()=>new Date().toISOString();
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeDB=v=>({routes:Array.isArray(v&&v.routes)?v.routes:[],updatedAt:v&&v.updatedAt||''});
+let db=safeDB(readLocal());let routeId=db.routes[0]?.id||'';let addStopArmed=false;let pendingPoint=null;let layers=L.layerGroup();let activeTrip=null;let tripTimer=null;let busMarker=null;let lastCloudStamp='';let cloudSaveTimer=null;
+function readLocal(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'null')}catch(e){return null}}
+function currentRoute(){return db.routes.find(r=>String(r.id)===String(routeId))||null}
+function stopRoute(){addStopArmed=false;$('addStopMode').classList.remove('green');$('addStopMode').classList.add('primary');$('addStopMode').textContent='＋ Добавить остановку на карте';$('map').classList.remove('add-stop-mode')}
+function setStatus(txt,ok){$('saveStatus').textContent=(ok?'● ':'◌ ')+txt;$('saveStatus').style.background=ok?'#e7f7ef':'#fff5df';$('saveStatus').style.color=ok?'#187751':'#8b6827'}
+function persistLocal(){db.updatedAt=nowISO();localStorage.setItem(STORAGE_KEY,JSON.stringify(db));setStatus('Локально сохранено',true);clearTimeout(cloudSaveTimer);cloudSaveTimer=setTimeout(saveCloud,800)}
+function mergeDB(a,b){const newer=(Date.parse(a?.updatedAt||'')||0)>=(Date.parse(b?.updatedAt||'')||0)?a:b;return safeDB(newer)}
+async function cloudRead(){const r=await fetch(CLOUD_URL+'?select=data,updated_at&id=eq.main',{headers:{apikey:CLOUD_KEY,Authorization:'Bearer '+CLOUD_KEY},cache:'no-store'});if(!r.ok)throw Error('GET '+r.status);const j=await r.json();return j&&j[0]?j[0]:null}
+async function saveCloud(){try{const latest=await cloudRead();const remote=safeDB(latest&&latest.data&&latest.data.dispatcherData);const merged=mergeDB(db,remote);if(merged!==db&&Date.parse(merged.updatedAt||'')>Date.parse(db.updatedAt||'')){db=merged;routeId=db.routes.some(r=>r.id===routeId)?routeId:(db.routes[0]?.id||'');renderAll()}const base=latest&&latest.data&&typeof latest.data==='object'?latest.data:{};const payload={id:'main',data:{...base,dispatcherData:db},updated_at:nowISO()};const resp=await fetch(CLOUD_URL,{method:'POST',headers:{apikey:CLOUD_KEY,Authorization:'Bearer '+CLOUD_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});if(!resp.ok)throw Error('POST '+resp.status);setStatus('Облако синхронизировано',true)}catch(e){console.warn('Dispatcher cloud sync:',e);setStatus('Локально сохранено · облако недоступно',false)}}
+async function pullCloud(){try{const row=await cloudRead();if(!row||!row.data||!row.data.dispatcherData)return;const remote=safeDB(row.data.dispatcherData);if((Date.parse(remote.updatedAt||'')||0)>(Date.parse(db.updatedAt||'')||0)){db=remote;routeId=db.routes[0]?.id||'';localStorage.setItem(STORAGE_KEY,JSON.stringify(db));renderAll();setStatus('Получено из облака',true)}}catch(e){setStatus('Локальный режим',false);console.info('Облако пока недоступно')}} 
+const map=L.map('map',{zoomControl:true,preferCanvas:true}).setView([56.8587,35.9176],11);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'}).addTo(map);
+layers.addTo(map);
+const busIcon=L.divIcon({className:'',html:'<div class="bus-pin">🚌</div>',iconSize:[34,34],iconAnchor:[17,17]});
+function markerIcon(){return L.divIcon({className:'',html:'<div class="stop-pin"></div>',iconSize:[19,19],iconAnchor:[9,9]})}
+function routeColor(index){const colors=['#4772e8','#16a078','#df8b27','#945fe8','#df5b78','#168ea9'];return colors[index%colors.length]}
+function routeIndex(r){return Math.max(0,db.routes.findIndex(x=>x.id===r.id))}
+function updateRouteMap(){layers.clearLayers();if(busMarker){try{map.removeLayer(busMarker)}catch(e){}busMarker=null}
+ db.routes.forEach((r,ri)=>{const pts=(r.stops||[]).filter(s=>Number.isFinite(Number(s.lat))&&Number.isFinite(Number(s.lng))).map(s=>[Number(s.lat),Number(s.lng)]);if(pts.length>1){L.polyline(pts,{color:routeColor(ri),weight:r.id===routeId?6:3,opacity:r.id===routeId?.88:.42,dashArray:r.id===routeId?null:'5 7'}).addTo(layers)}
+ (r.stops||[]).forEach((s,si)=>{const m=L.marker([Number(s.lat),Number(s.lng)],{icon:markerIcon(),keyboard:true}).addTo(layers);m.bindTooltip((si+1)+'. '+esc(s.name||'Остановка'),{permanent:true,direction:'top',offset:[0,-7],className:'stop-label'});m.bindPopup('<strong>'+esc(s.name||'Остановка')+'</strong><br><span style="color:#71809a;font-size:12px">'+esc(s.arrival||'')+(s.departure?' — '+esc(s.departure):'')+'</span>');m.on('click',()=>{if(document.body.classList.contains('dispatch-mode'))return;routeId=r.id;renderAll();highlightStop(s.id)})})});
+ if(activeTrip){const r=db.routes.find(x=>x.id===activeTrip.routeId);if(r&&r.stops.length){const p=interpolatedPosition(r,activeTrip);busMarker=L.marker(p,{icon:busIcon,zIndexOffset:1200,keyboard:false}).addTo(map);busMarker.bindTooltip(esc(r.name||'Рейс'),{permanent:true,direction:'right',offset:[14,0]})}}
+}
+function renderRoutePicker(){const old=routeId;$('routePicker').innerHTML=db.routes.length?db.routes.map(r=>'<option value="'+esc(r.id)+'">'+esc(r.name||'Без названия')+'</option>').join(''):'<option value="">Пока нет маршрутов</option>';if(db.routes.some(r=>r.id===old))$('routePicker').value=old;routeId=$('routePicker').value||'';$('dispatchRoute').innerHTML=db.routes.length?db.routes.map(r=>'<option value="'+esc(r.id)+'">'+esc(r.name||'Без названия')+'</option>').join(''):'<option value="">Выбери маршрут</option>';if(db.routes.some(r=>r.id===old))$('dispatchRoute').value=old;else $('dispatchRoute').value=db.routes[0]?.id||'';$('routeCount').textContent=db.routes.length+' маршрут(ов)'}
+function renderRouteFields(){const r=currentRoute();$('routeName').disabled=!r;$('routeType').disabled=!r;$('routeFare').disabled=!r;$('saveRoute').disabled=!r;$('deleteRoute').disabled=!r;$('zoomRoute').disabled=!r;if(!r){$('routeName').value='';$('routeType').value='Автобус';$('routeFare').value='0.50';$('routeSummary').textContent='Создай маршрут, затем добавляй остановки кликами по карте.';$('stopCount').textContent='0 остановок';$('stopList').innerHTML='<div class="empty">Сначала создай маршрут.</div>';return}
+ $('routeName').value=r.name||'';$('routeType').value=r.type||'Автобус';$('routeFare').value=Number(r.fare??0.5).toFixed(2);$('routeSummary').textContent=(r.type||'Транспорт')+' · '+(r.stops||[]).length+' остановок · '+Number(r.fare||0).toFixed(2)+' BYN за билет';$('stopCount').textContent=(r.stops||[]).length+' остановок';
+ $('stopList').innerHTML=(r.stops||[]).length?r.stops.map((s,i)=>'<div class="stop-card" data-stop-card="'+esc(s.id)+'"><div class="stop-top"><span class="stop-number">'+(i+1)+'</span><input aria-label="Название остановки" data-name="'+esc(s.id)+'" value="'+esc(s.name||'')+'" maxlength="100"><span class="stop-actions"><button class="icon-btn" data-up="'+esc(s.id)+'" title="Выше" '+(i===0?'disabled':'')+'>↑</button><button class="icon-btn" data-down="'+esc(s.id)+'" title="Ниже" '+(i===r.stops.length-1?'disabled':'')+'>↓</button><button class="icon-btn" data-center="'+esc(s.id)+'" title="Показать">⌖</button><button class="icon-btn" data-delete="'+esc(s.id)+'" title="Удалить">×</button></span></div><div class="stop-meta"><label>Прибытие<input type="time" data-arrival="'+esc(s.id)+'" value="'+esc(s.arrival||'')+'"></label><label>Отправление<input type="time" data-departure="'+esc(s.id)+'" value="'+esc(s.departure||'')+'"></label></div><input class="stop-note" data-note="'+esc(s.id)+'" maxlength="160" placeholder="Примечание к остановке" value="'+esc(s.note||'')+'"></div>').join(''):'<div class="empty">На маршруте пока нет остановок.<br>Нажми «Добавить остановку на карте».</div>'}
+function renderSchedule(){const r=currentRoute();if(!r||!r.stops.length){$('scheduleTable').innerHTML='<div class="empty">Сначала создай маршрут и добавь остановки.</div>';$('scheduleCount').textContent='0 остановок';return}$('scheduleCount').textContent=r.stops.length+' остановок';$('scheduleTable').innerHTML='<table><thead><tr><th>№</th><th>Прибытие</th><th>Отправление</th><th>Остановка</th></tr></thead><tbody>'+r.stops.map((s,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(s.arrival||'—')+'</td><td>'+esc(s.departure||'—')+'</td><td>'+esc(s.name||'—')+'</td></tr>').join('')+'</tbody></table>'}
+function renderDispatch(){const r=db.routes.find(x=>x.id===($('dispatchRoute').value||routeId));if(!r){$('dispatchBanner').innerHTML='<strong>Нет маршрута</strong><span>Сначала создай маршрут в конструкторе.</span>';$('dispatchProgress').textContent='';$('startTrip').disabled=true;return}$('startTrip').disabled=(r.stops||[]).length<2;$('stopTrip').disabled=!activeTrip;$('prevStop').disabled=!activeTrip;$('nextStop').disabled=!activeTrip;const run=activeTrip&&activeTrip.routeId===r.id?activeTrip:null;const ix=run?Math.min(run.index,r.stops.length-1):0;const stop=r.stops[ix];$('dispatchBanner').innerHTML='<strong>'+esc(run?(r.name||'Рейс'): 'Рейс не запущен')+'</strong><span>'+esc(run&&stop?('Текущая остановка: '+stop.name):((r.name||'Маршрут')+' · '+r.stops.length+' остановок'))+'</span>';$('dispatchProgress').textContent=run?'Остановка '+(ix+1)+' из '+r.stops.length+(run.running?' · автобус движется к следующей':' · пауза')+(stop&&stop.arrival?' · прибытие по расписанию '+stop.arrival:''):'Чтобы начать, нажми «Начать рейс». Движение будет симулироваться по линии маршрута.'}
+function renderAll(){renderRoutePicker();renderRouteFields();renderSchedule();renderDispatch();updateRouteMap()}
+function selectedRouteId(){return document.body.classList.contains('dispatch-mode')?($('dispatchRoute').value||routeId):routeId}
+function setMode(dispatch){document.body.classList.toggle('dispatch-mode',dispatch);$('dispatchMode').classList.toggle('active',dispatch);$('builderMode').classList.toggle('active',!dispatch);if(dispatch)stopRoute();map.invalidateSize();updateRouteMap();renderDispatch()}
+function highlightStop(id){const r=currentRoute();if(!r)return;const s=r.stops.find(x=>x.id===id);if(!s)return;map.flyTo([s.lat,s.lng],Math.max(map.getZoom(),14),{duration:.4});document.querySelectorAll('.stop-card').forEach(e=>e.classList.toggle('selected',e.dataset.stopCard===id))}
+function newRoute(){const r={id:uid(),name:'Новый маршрут '+(db.routes.length+1),type:'Автобус',fare:0.5,stops:[],updatedAt:nowISO()};db.routes.push(r);routeId=r.id;persistLocal();renderAll();$('routeName').focus();$('routeName').select()}
+function saveRouteFields(){const r=currentRoute();if(!r)return;r.name=$('routeName').value.trim()||'Без названия';r.type=$('routeType').value;r.fare=Math.max(0,Number($('routeFare').value)||0);r.updatedAt=nowISO();persistLocal();renderAll()}
+function deleteRoute(){const r=currentRoute();if(!r)return;if(!confirm('Удалить маршрут «'+(r.name||'Без названия')+'» и все его остановки?'))return;if(activeTrip?.routeId===r.id)endTrip();db.routes=db.routes.filter(x=>x.id!==r.id);routeId=db.routes[0]?.id||'';persistLocal();renderAll()}
+function addStopMode(){const r=currentRoute();if(!r){alert('Сначала создай маршрут.');return}addStopArmed=!addStopArmed;if(addStopArmed){$('addStopMode').classList.remove('primary');$('addStopMode').classList.add('green');$('addStopMode').textContent='Пришли на карте место остановки…';$('map').classList.add('add-stop-mode')}else stopRoute()}
+map.on('click',e=>{if(!addStopArmed)return;if(document.body.classList.contains('dispatch-mode'))return;pendingPoint={lat:e.latlng.lat,lng:e.latlng.lng};$('stopCoords').textContent='Координаты: '+pendingPoint.lat.toFixed(5)+', '+pendingPoint.lng.toFixed(5);$('stopNameInput').value='';$('stopArrivalInput').value='';$('stopDepartureInput').value='';$('stopNoteInput').value='';$('stopModal').classList.add('open');setTimeout(()=>$('stopNameInput').focus(),80);stopRoute()});
+$('stopForm').addEventListener('submit',e=>{e.preventDefault();const r=currentRoute();if(!r||!pendingPoint)return;const name=$('stopNameInput').value.trim();if(!name)return;r.stops.push({id:uid(),name,lat:pendingPoint.lat,lng:pendingPoint.lng,arrival:$('stopArrivalInput').value,departure:$('stopDepartureInput').value,note:$('stopNoteInput').value.trim()});r.updatedAt=nowISO();$('stopModal').classList.remove('open');pendingPoint=null;persistLocal();renderAll()});
+$('cancelStopModal').addEventListener('click',()=>$('stopModal').classList.remove('open'));$('stopModal').addEventListener('click',e=>{if(e.target===$('stopModal'))$('stopModal').classList.remove('open')});
+$('stopList').addEventListener('change',e=>{const r=currentRoute();if(!r)return;const t=e.target;const id=t.dataset.name||t.dataset.arrival||t.dataset.departure||t.dataset.note;if(!id)return;const s=r.stops.find(x=>x.id===id);if(!s)return;if(t.dataset.name)s.name=t.value.trim()||'Остановка';if(t.dataset.arrival!==undefined)s.arrival=t.value;if(t.dataset.departure!==undefined)s.departure=t.value;if(t.dataset.note!==undefined)s.note=t.value;r.updatedAt=nowISO();persistLocal();renderAll()});
+$('stopList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const r=currentRoute();if(!r)return;const move=(id,step)=>{const i=r.stops.findIndex(s=>s.id===id),j=i+step;if(i<0||j<0||j>=r.stops.length)return;[r.stops[i],r.stops[j]]=[r.stops[j],r.stops[i]]};if(b.dataset.up){move(b.dataset.up,-1)}else if(b.dataset.down){move(b.dataset.down,1)}else if(b.dataset.delete){if(!confirm('Удалить эту остановку?'))return;r.stops=r.stops.filter(s=>s.id!==b.dataset.delete)}else if(b.dataset.center){highlightStop(b.dataset.center);return}else return;r.updatedAt=nowISO();persistLocal();renderAll()});
+$('routePicker').addEventListener('change',()=>{routeId=$('routePicker').value;stopRoute();renderAll()});
+$('dispatchRoute').addEventListener('change',()=>{const id=$('dispatchRoute').value;if(activeTrip&&activeTrip.routeId!==id)pauseTrip();updateRouteMap();renderDispatch()});
+$('routeName').addEventListener('change',saveRouteFields);$('routeType').addEventListener('change',saveRouteFields);$('routeFare').addEventListener('change',saveRouteFields);
+$('newRoute').addEventListener('click',newRoute);$('saveRoute').addEventListener('click',saveRouteFields);$('deleteRoute').addEventListener('click',deleteRoute);$('zoomRoute').addEventListener('click',()=>{const r=currentRoute();if(!r||!r.stops.length)return;const b=L.latLngBounds(r.stops.map(s=>[s.lat,s.lng]));map.fitBounds(b,{padding:[55,55],maxZoom:15})});$('addStopMode').addEventListener('click',addStopMode);
+$('builderMode').addEventListener('click',()=>setMode(false));$('dispatchMode').addEventListener('click',()=>setMode(true));
+function interpolatedPosition(r,run){if(!r||!r.stops.length)return[56.8587,35.9176];const i=Math.min(run.index||0,r.stops.length-1),a=r.stops[i],b=r.stops[Math.min(i+1,r.stops.length-1)];if(!run.running||!b||i===r.stops.length-1)return[Number(a.lat),Number(a.lng)];const duration=Math.max(1000,Number($('travelSpeed').value||15)*1000);const p=Math.max(0,Math.min(1,(Date.now()-run.segmentStarted)/duration));return[Number(a.lat)+(Number(b.lat)-Number(a.lat))*p,Number(a.lng)+(Number(b.lng)-Number(a.lng))*p]}
+function updateBus(){if(!activeTrip)return;const r=db.routes.find(x=>x.id===activeTrip.routeId);if(!r||!r.stops.length)return;if(busMarker){busMarker.setLatLng(interpolatedPosition(r,activeTrip))}else updateRouteMap();if(activeTrip.running){const duration=Math.max(1000,Number($('travelSpeed').value||15)*1000);if(Date.now()-activeTrip.segmentStarted>=duration){activeTrip.index++;if(activeTrip.index>=r.stops.length-1){activeTrip.index=r.stops.length-1;activeTrip.running=false;clearInterval(tripTimer);tripTimer=null;activeTrip.segmentStarted=Date.now();persistLocal();renderDispatch();updateRouteMap();return}activeTrip.segmentStarted=Date.now();persistLocal();renderDispatch();updateRouteMap()}}}
+function startTrip(){const r=db.routes.find(x=>x.id===($('dispatchRoute').value||routeId));if(!r||r.stops.length<2){alert('Для рейса нужно не менее двух остановок. Сначала добавь их в конструкторе.');return}routeId=r.id;activeTrip={routeId:r.id,index:0,running:true,segmentStarted:Date.now()};if(tripTimer)clearInterval(tripTimer);tripTimer=setInterval(updateBus,50);map.flyTo([r.stops[0].lat,r.stops[0].lng],Math.max(map.getZoom(),13),{duration:.5});renderAll()}
+function pauseTrip(){if(activeTrip)activeTrip.running=false;if(tripTimer)clearInterval(tripTimer);tripTimer=null;if(activeTrip){const r=db.routes.find(x=>x.id===activeTrip.routeId);if(r&&r.stops[activeTrip.index]){} }renderDispatch();updateRouteMap()}
+function endTrip(){pauseTrip();activeTrip=null;renderAll()}
+function stepTrip(delta){if(!activeTrip)return;const r=db.routes.find(x=>x.id===activeTrip.routeId);if(!r)return;pauseTrip();activeTrip.index=Math.max(0,Math.min(r.stops.length-1,activeTrip.index+delta));activeTrip.segmentStarted=Date.now();persistLocal();renderAll();const s=r.stops[activeTrip.index];if(s)map.flyTo([s.lat,s.lng],Math.max(map.getZoom(),13),{duration:.35})}
+$('startTrip').addEventListener('click',startTrip);$('stopTrip').addEventListener('click',()=>{if(activeTrip){if(activeTrip.running)pauseTrip();else{activeTrip.running=true;activeTrip.segmentStarted=Date.now();tripTimer=setInterval(updateBus,50);renderDispatch()}}});$('nextStop').addEventListener('click',()=>stepTrip(1));$('prevStop').addEventListener('click',()=>stepTrip(-1));
+function openYandex(){window.open('https://yandex.ru/maps/?ll=35.9176%2C56.8587&z=11&l=map','_blank','noopener')}
+window.addEventListener('resize',()=>map.invalidateSize());window.addEventListener('storage',e=>{if(e.key===STORAGE_KEY&&e.newValue){const remote=safeDB(JSON.parse(e.newValue));if((Date.parse(remote.updatedAt||'')||0)>(Date.parse(db.updatedAt||'')||0)){db=remote;routeId=db.routes[0]?.id||'';renderAll()}}});
+renderAll();pullCloud();setInterval(()=>{if(!document.hidden)pullCloud()},30000);
+})();
+</script>
+</body>
+</html>
