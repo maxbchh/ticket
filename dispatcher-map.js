@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   const STORE = 'ticket_dispatcher_routes_v1';
+  const DELETED_STORE = 'ticket_dispatcher_deleted_route_ids';
   const TVER = [56.8587, 35.9176];
   const $ = id => document.getElementById(id);
   let editMap = null, dispatchMap = null, editMarkers = [], editLine = null;
@@ -163,7 +164,7 @@
     el.innerHTML = routes.map(r => '<div class="dmap-route-item ' + (r.id === editRouteId ? 'selected' : '') + '"><button type="button" class="dmap-route-select" data-edit-route="' + esc(r.id) + '"><strong>' + esc(r.name) + '</strong><span>' + r.stops.length + ' остановок</span></button><button type="button" class="btn btn-outline dmap-small-btn" data-rename-route="' + esc(r.id) + '" title="Переименовать">✎</button><button type="button" class="btn btn-red dmap-small-btn" data-remove-route="' + esc(r.id) + '" title="Удалить">×</button></div>').join('');
     el.querySelectorAll('[data-edit-route]').forEach(b => b.addEventListener('click', () => selectEditRoute(b.dataset.editRoute)));
     el.querySelectorAll('[data-rename-route]').forEach(b => b.addEventListener('click', () => { const r = routes.find(x => x.id === b.dataset.renameRoute); if (!r) return; const n = prompt('Новое название маршрута:', r.name); if (n && n.trim()) { r.name = n.trim(); persist(); renderRouteList(); renderDispatchRouteOptions(); renderEditPanel(); } }));
-    el.querySelectorAll('[data-remove-route]').forEach(b => b.addEventListener('click', () => { const r = routes.find(x => x.id === b.dataset.removeRoute); if (!r || !confirm('Удалить маршрут «' + r.name + '»?')) return; routes = routes.filter(x => x.id !== r.id); if (editRouteId === r.id) editRouteId = ''; persist(); renderRouteList(); renderEditPanel(); drawEditRoute(); renderDispatchRouteOptions(); renderDispatchMap(); }));
+    el.querySelectorAll('[data-remove-route]').forEach(b => b.addEventListener('click', () => { const r = routes.find(x => x.id === b.dataset.removeRoute); if (!r || !confirm('Удалить маршрут «' + r.name + '»?')) return; let deleted = []; try { deleted = JSON.parse(localStorage.getItem(DELETED_STORE) || '[]'); } catch (_) {} if (!deleted.includes(String(r.id))) deleted.push(String(r.id)); localStorage.setItem(DELETED_STORE, JSON.stringify(deleted)); routes = routes.filter(x => x.id !== r.id); if (editRouteId === r.id) editRouteId = ''; persist(); renderRouteList(); renderEditPanel(); drawEditRoute(); renderDispatchRouteOptions(); renderDispatchMap(); }));
   }
   function selectEditRoute(routeId) {
     editRouteId = routeId;
