@@ -14,6 +14,8 @@
     catch (_) { return []; }
   }
   function persist() {
+    const active = routes.find(r => r.id === editRouteId);
+    if (active) active.updatedAt = new Date().toISOString();
     localStorage.setItem(STORE, JSON.stringify(routes));
     if (typeof window.syncConductorData === 'function') {
       clearTimeout(persist.syncTimer);
@@ -216,7 +218,7 @@
   function startPlayback() {
     const r = chosenDispatchRoute();
     if (!r || r.stops.length < 2) return notify('Для движения нужен маршрут минимум с двумя остановками.');
-    stopPlayback(); playbackIndex = 0; moveBusTo(0); renderDispatchSchedule();
+    stopPlayback(); if (playbackIndex >= r.stops.length) playbackIndex = 0; moveBusTo(playbackIndex); renderDispatchSchedule();
     const status = $('dispatcherVehicleStatus');
     if (status) status.textContent = 'Учебное движение: ' + r.name;
     playbackTimer = setInterval(() => {
@@ -258,7 +260,7 @@
       const b = $('dispatcherPlayButton'); if (b && playbackTimer) b.textContent = 'Ⅱ Приостановить движение';
     });
     if ($('dispatcherNextButton')) $('dispatcherNextButton').addEventListener('click', nextStop);
-    if ($('dispatcherStopButton')) $('dispatcherStopButton').addEventListener('click', () => { stopPlayback(); playbackIndex = 0; renderDispatchSchedule(); });
+    if ($('dispatcherStopButton')) $('dispatcherStopButton').addEventListener('click', () => { stopPlayback(); playbackIndex = 0; moveBusTo(0); renderDispatchSchedule(); });
     if ($('dispatcherRoutePreviewSelect')) $('dispatcherRoutePreviewSelect').addEventListener('change', () => { const a = $('dispatcherRunRoute'), b = $('dispatcherRoutePreviewSelect'); if (a && b) a.value = b.value; stopPlayback(); playbackIndex = 0; renderDispatchMap(); });
   }
   function init() {
