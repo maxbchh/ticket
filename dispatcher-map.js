@@ -139,6 +139,8 @@
     if (name && r && name.value !== r.name) name.value = r.name;
     const averageInput = $('dispatcherAverageInput');
     if (averageInput && r && document.activeElement !== averageInput) averageInput.value = String(averageTravelMinutes(r)).replace('.', ',');
+    const avgSummary = $('dispatcherAverageSummary');
+    if (avgSummary && r) avgSummary.textContent = 'Среднее время между остановками: ' + averageTravelMinutes(r).toLocaleString('ru-RU') + ' мин. Автоматическая стоянка на каждой остановке — 15 секунд.';
     const list = $('dispatcherStopRows');
     if (!list) return;
     if (!r) { list.innerHTML = '<tr><td colspan="3" class="dmap-muted">Создайте маршрут, затем нажимайте на карту, чтобы добавлять остановки.</td></tr>'; return; }
@@ -380,9 +382,10 @@
     if ($('dispatcherNewRoute')) $('dispatcherNewRoute').addEventListener('click', startNewRoute);
     if ($('dispatcherSaveRoute')) $('dispatcherSaveRoute').addEventListener('click', saveRoute);
     if ($('dispatcherRouteName')) $('dispatcherRouteName').addEventListener('change', saveRoute);
+    if ($('dispatcherAverageInput')) $('dispatcherAverageInput').addEventListener('change', saveAverageTime);
     if ($('dispatcherRunRoute')) $('dispatcherRunRoute').addEventListener('change', () => { stopPlayback(); playbackIndex = 0; renderDispatchMap(); });
     if ($('dispatcherPlayButton')) $('dispatcherPlayButton').addEventListener('click', () => {
-      if (playbackPhase === 'moving' || playbackPhase === 'dwell') pausePlayback(); else startPlayback();
+      if (playbackPhase === 'moving' || playbackPhase === 'dwell') pausePlayback(); else if (playbackPhase === 'loading') { stopPlayback(); notify('Подготовка движения остановлена. Нажми «Запустить» ещё раз.'); } else startPlayback();
     });
     if ($('dispatcherNextButton')) $('dispatcherNextButton').addEventListener('click', nextStop);
     if ($('dispatcherStopButton')) $('dispatcherStopButton').addEventListener('click', () => { stopPlayback(); playbackIndex = 0; moveBusTo(0); renderDispatchSchedule(); });
