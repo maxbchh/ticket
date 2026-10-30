@@ -1,4 +1,4 @@
-const CACHE_NAME = "ticket-pwa-v49";
+const CACHE_NAME = "ticket-pwa-v50";
 const APP_SHELL = [
   "./", "./index.html", "./manifest.webmanifest", "./cloud-sync.js",
   "./qr-sales.js", "./qr-pay.html", "./qr-ticket.html", "./card-terminal.html",
