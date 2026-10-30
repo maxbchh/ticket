@@ -6,7 +6,7 @@
   const TVER = [56.8587, 35.9176];
   const $ = id => document.getElementById(id);
   let editMap = null, dispatchMap = null, editMarkers = [], editLine = null;
-  let dispatchMarkers = [], dispatchLine = null, busMarker = null, playbackTimer = null, playbackIndex = 0;
+  let dispatchMarkers = [], dispatchLine = null, busMarker = null, playbackTimer = null, playbackFrame = null, playbackIndex = 0, playbackStartedAt = 0, playbackDuration = 0, playbackPath = [], playbackFrom = 0, playbackTo = 1, playbackPaused = false;
   let editRouteId = '', addingStops = true, leafletPromise = null, editRouteRenderToken = 0, dispatchRouteRenderToken = 0;
   let routes = loadRoutes();
 
@@ -69,7 +69,7 @@
         if (!r) { notify('Сначала создайте новый маршрут или выберите сохранённый.'); return; }
         const nameInput = $('dispatcherNewStopName');
         const name = (nameInput && nameInput.value.trim()) || ('Остановка ' + (r.stops.length + 1));
-        r.stops.push({ id: id(), name, lat: Number(e.latlng.lat.toFixed(6)), lng: Number(e.latlng.lng.toFixed(6)), arrival: '', departure: '' });
+        r.stops.push({ id: id(), name, lat: Number(e.latlng.lat.toFixed(6)), lng: Number(e.latlng.lng.toFixed(6)), travelMinutes: null });
         if (nameInput) nameInput.value = '';
         persist(); renderEditPanel(); drawEditRoute(); renderDispatchRouteOptions();
         notify('Остановка добавлена. Название и расписание можно изменить в списке.');
@@ -127,6 +127,10 @@
     if (points.length) editMap.fitBounds(L.latLngBounds(points).pad(.18), { maxZoom: 15 });
     setTimeout(() => editMap && editMap.invalidateSize(), 80);
   }
+  function averageTravelMinutes(r) {
+    const values = (r && r.stops ? r.stops.slice(0, -1) : []).map(s => Number(s.travelMinutes)).filter(n => Number.isFinite(n) && n > 0);
+    return values.length ? values.reduce((a,b) => a+b, 0) / values.length : 1.5;
+  }
   function renderEditPanel() {
     const r = currentEditRoute();
     const title = $('dispatcherEditTitle');
@@ -137,10 +141,11 @@
     if (!list) return;
     if (!r) { list.innerHTML = '<tr><td colspan="5" class="dmap-muted">Создайте маршрут, затем нажимайте на карту, чтобы добавлять остановки.</td></tr>'; return; }
     if (!r.stops.length) { list.innerHTML = '<tr><td colspan="5" class="dmap-muted">На карте пока нет остановок. Нажмите на нужные места.</td></tr>'; return; }
-    list.innerHTML = r.stops.map((s, i) => '<tr><td><span class="dmap-order">' + (i + 1) + '</span></td><td><input aria-label="Название остановки ' + (i + 1) + '" value="' + esc(s.name) + '" data-stop-name="' + esc(s.id) + '"></td><td><input type="time" aria-label="Прибытие ' + (i + 1) + '" value="' + esc(s.arrival) + '" data-stop-arrival="' + esc(s.id) + '"></td><td><input type="time" aria-label="Отправление ' + (i + 1) + '" value="' + esc(s.departure) + '" data-stop-departure="' + esc(s.id) + '"></td><td><button class="btn btn-outline dmap-small-btn" type="button" data-up="' + esc(s.id) + '" title="Выше">↑</button> <button class="btn btn-outline dmap-small-btn" type="button" data-down="' + esc(s.id) + '" title="Ниже">↓</button> <button class="btn btn-red dmap-small-btn" type="button" data-delete="' + esc(s.id) + '" title="Удалить остановку">×</button></td></tr>').join('');
+    list.innerHTML = r.stops.map((s, i) => '<tr><td><span class="dmap-order">' + (i + 1) + '</span></td><td><input aria-label="Название остановки ' + (i + 1) + '" value="' + esc(s.name) + '" data-stop-name="' + esc(s.id) + '"></td><td>' + (i < r.stops.length - 1 ? '<label class="dmap-muted" style="display:block;margin-bottom:3px">Минут до «' + esc(r.stops[i+1].name) + '»</label><input type="number" min="0.1" max="60" step="0.1" placeholder="Напр. 2" aria-label="Время от ' + esc(s.name) + ' до ' + esc(r.stops[i+1].name) + '" value="' + (Number(s.travelMinutes) > 0 ? esc(s.travelMinutes) : '') + '" data-stop-time="' + esc(s.id) + '">' : '<span class="dmap-muted">Конечная</span>') + '</td><td><button class="btn btn-outline dmap-small-btn" type="button" data-up="' + esc(s.id) + '" title="Выше">↑</button> <button class="btn btn-outline dmap-small-btn" type="button" data-down="' + esc(s.id) + '" title="Ниже">↓</button> <button class="btn btn-red dmap-small-btn" type="button" data-delete="' + esc(s.id) + '" title="Удалить остановку">×</button></td></tr>').join('');
+    const avg = $('dispatcherAverageTime');
+    if (avg) avg.textContent = 'Среднее время между остановками: ' + averageTravelMinutes(r).toFixed(2).replace('.', ',') + ' мин';
     list.querySelectorAll('[data-stop-name]').forEach(el => el.addEventListener('change', () => changeStop(el.dataset.stopName, 'name', el.value)));
-    list.querySelectorAll('[data-stop-arrival]').forEach(el => el.addEventListener('change', () => changeStop(el.dataset.stopArrival, 'arrival', el.value)));
-    list.querySelectorAll('[data-stop-departure]').forEach(el => el.addEventListener('change', () => changeStop(el.dataset.stopDeparture, 'departure', el.value)));
+    list.querySelectorAll('[data-stop-time]').forEach(el => el.addEventListener('change', () => { const v = Number(el.value); if (!Number.isFinite(v) || v <= 0 || v > 60) { notify('Укажи время от 0,1 до 60 минут.'); renderEditPanel(); return; } changeStop(el.dataset.stopTime, 'travelMinutes', v); }));
     list.querySelectorAll('[data-delete]').forEach(el => el.addEventListener('click', () => { if (!confirm('Удалить эту остановку?')) return; const rr = currentEditRoute(); rr.stops = rr.stops.filter(s => s.id !== el.dataset.delete); persist(); renderEditPanel(); drawEditRoute(); renderDispatchRouteOptions(); }));
     list.querySelectorAll('[data-up]').forEach(el => el.addEventListener('click', () => reorderStop(el.dataset.up, -1)));
     list.querySelectorAll('[data-down]').forEach(el => el.addEventListener('click', () => reorderStop(el.dataset.down, 1)));
@@ -149,7 +154,7 @@
     const r = currentEditRoute(); if (!r) return;
     const s = r.stops.find(x => x.id === stopId); if (!s) return;
     s[field] = field === 'name' ? (value.trim() || s.name) : value;
-    persist(); drawEditRoute(); renderDispatchRouteOptions();
+    persist(); renderEditPanel(); drawEditRoute(); renderDispatchRouteOptions();
   }
   function reorderStop(stopId, delta) {
     const r = currentEditRoute(); if (!r) return;
@@ -237,42 +242,91 @@
     const r = chosenDispatchRoute(), el = $('dispatcherScheduleRows');
     if (!el) return;
     if (!r || !r.stops.length) { el.innerHTML = '<tr><td colspan="4" class="dmap-muted">Нет остановок для отображения.</td></tr>'; return; }
-    el.innerHTML = r.stops.map((s, i) => '<tr class="' + (i === playbackIndex ? 'dmap-current-stop' : '') + '"><td>' + (i + 1) + '</td><td>' + esc(s.name) + '</td><td>' + esc(s.arrival || '—') + '</td><td>' + esc(s.departure || '—') + '</td></tr>').join('');
+    const avg = averageTravelMinutes(r);
+    el.innerHTML = r.stops.map((s, i) => '<tr class="' + (i === playbackIndex ? 'dmap-current-stop' : '') + '"><td>' + (i + 1) + '</td><td>' + esc(s.name) + '</td><td>' + (i < r.stops.length - 1 ? esc(Number(s.travelMinutes) > 0 ? s.travelMinutes : '—') + ' мин до следующей' : 'Конечная') + '</td><td>' + (i < r.stops.length - 1 ? esc(avg.toFixed(2).replace('.', ',')) + ' мин (среднее)' : '—') + '</td></tr>').join('');
     const n = $('dispatcherNextStop');
-    if (n) n.textContent = r.stops[playbackIndex] ? 'Текущая: ' + r.stops[playbackIndex].name : 'Маршрут завершён';
+    if (n) n.textContent = r.stops[playbackIndex] ? 'Автобус: ' + r.stops[playbackIndex].name + (r.stops[playbackIndex+1] ? ' → ' + r.stops[playbackIndex+1].name + ' · среднее время в пути ' + avg.toFixed(2).replace('.', ',') + ' мин' : ' · конечная остановка') : 'Маршрут завершён';
+  }
+  function stopPlayback() {
+    if (playbackTimer) clearTimeout(playbackTimer);
+    if (playbackFrame) cancelAnimationFrame(playbackFrame);
+    playbackTimer = playbackFrame = null; playbackPaused = false;
+    const b = $('dispatcherPlayButton');
+    if (b) b.textContent = '▶ Запустить учебное движение';
+  }
+  function legGeometry(a, b) {
+    const url = 'https://router.project-osrm.org/route/v1/driving/' + a.lng + ',' + a.lat + ';' + b.lng + ',' + b.lat + '?overview=full&geometries=geojson&steps=false';
+    return fetch(url, { mode: 'cors' }).then(r => { if (!r.ok) throw new Error('routing unavailable'); return r.json(); })
+      .then(data => data && data.code === 'Ok' && data.routes && data.routes[0] ? data.routes[0].geometry.coordinates.map(p => [p[1], p[0]]) : [[a.lat,a.lng],[b.lat,b.lng]])
+      .catch(() => [[a.lat,a.lng],[b.lat,b.lng]]);
+  }
+  function pointAlongPath(path, progress) {
+    if (!path.length) return null;
+    if (path.length === 1) return path[0];
+    const lengths = []; let total = 0;
+    for (let i=1;i<path.length;i++) { const dx=(path[i][1]-path[i-1][1])*Math.cos((path[i][0]+path[i-1][0])*Math.PI/360), dy=path[i][0]-path[i-1][0]; const d=Math.sqrt(dx*dx+dy*dy); lengths.push(d); total+=d; }
+    let target=total*Math.max(0,Math.min(1,progress));
+    for(let i=0;i<lengths.length;i++){if(target<=lengths[i]||i===lengths.length-1){const t=lengths[i] ? target/lengths[i] : 0;return [path[i][0]+(path[i+1][0]-path[i][0])*t,path[i][1]+(path[i+1][1]-path[i][1])*t];}target-=lengths[i];}
+    return path[path.length-1];
+  }
+  function animateLeg() {
+    const elapsed = performance.now() - playbackStartedAt;
+    const p = Math.min(1, elapsed / playbackDuration);
+    const pos = pointAlongPath(playbackPath, p);
+    if (pos && busMarker) busMarker.setLatLng(pos);
+    if (p >= 1) {
+      playbackIndex = playbackTo;
+      renderDispatchSchedule();
+      if (playbackIndex >= (chosenDispatchRoute()?.stops.length || 0)-1) {
+        stopPlayback();
+        const status = $('dispatcherVehicleStatus'); if (status) status.textContent = 'Маршрут завершён · ' + (chosenDispatchRoute()?.name || '');
+        return;
+      }
+      playbackTimer = setTimeout(beginNextLeg, 0);
+      return;
+    }
+    playbackFrame = requestAnimationFrame(animateLeg);
+  }
+  async function beginNextLeg() {
+    const r = chosenDispatchRoute();
+    if (!r || playbackIndex >= r.stops.length-1) return stopPlayback();
+    playbackFrom = playbackIndex; playbackTo = playbackIndex+1;
+    const path = await legGeometry(r.stops[playbackFrom],r.stops[playbackTo]);
+    if (!chosenDispatchRoute() || chosenDispatchRoute().id !== r.id) return stopPlayback();
+    playbackPath = path;
+    playbackDuration = averageTravelMinutes(r) * 60000;
+    playbackStartedAt = performance.now();
+    const status = $('dispatcherVehicleStatus');
+    if (status) status.textContent = 'В пути: ' + r.stops[playbackFrom].name + ' → ' + r.stops[playbackTo].name;
+    if (!busMarker) moveBusTo(playbackFrom);
+    playbackFrame = requestAnimationFrame(animateLeg);
   }
   function startPlayback() {
     const r = chosenDispatchRoute();
     if (!r || r.stops.length < 2) return notify('Для движения нужен маршрут минимум с двумя остановками.');
-    stopPlayback(); if (playbackIndex >= r.stops.length) playbackIndex = 0; moveBusTo(playbackIndex); renderDispatchSchedule();
-    const status = $('dispatcherVehicleStatus');
-    if (status) status.textContent = 'Учебное движение: ' + r.name;
-    playbackTimer = setInterval(() => {
-      const rr = chosenDispatchRoute(); if (!rr || !rr.stops.length) return stopPlayback();
-      playbackIndex++;
-      if (playbackIndex >= rr.stops.length) { playbackIndex = rr.stops.length - 1; moveBusTo(playbackIndex); renderDispatchSchedule(); stopPlayback(); if (status) status.textContent = 'Маршрут завершён · ' + rr.name; return; }
-      moveBusTo(playbackIndex); renderDispatchSchedule();
-    }, 5000);
+    if (playbackPaused && playbackPath.length) {
+      playbackPaused = false; playbackStartedAt = performance.now() - (playbackProgress || 0) * playbackDuration;
+      playbackFrame = requestAnimationFrame(animateLeg);
+      const b=$('dispatcherPlayButton'); if(b)b.textContent='Ⅱ Приостановить движение';
+      return;
+    }
+    stopPlayback(); if (playbackIndex >= r.stops.length-1) playbackIndex=0;
+    moveBusTo(playbackIndex); renderDispatchSchedule();
+    const status=$('dispatcherVehicleStatus'); if(status)status.textContent='Учебное движение: '+r.name;
+    beginNextLeg();
+    const b=$('dispatcherPlayButton'); if(b)b.textContent='Ⅱ Приостановить движение';
   }
-  function moveBusTo(index) {
-    const r = chosenDispatchRoute(); if (!dispatchMap || !r || !r.stops[index]) return;
-    const s = r.stops[index], pos = [s.lat, s.lng];
-    const icon = L.divIcon({ className: 'dmap-bus-icon', html: '<div>🚌</div>', iconSize: [36, 36], iconAnchor: [18, 18] });
-    if (!busMarker) busMarker = L.marker(pos, { icon, zIndexOffset: 1000 }).addTo(dispatchMap);
-    else busMarker.setLatLng(pos);
-    busMarker.bindTooltip('Учебный автобус · ' + s.name, { direction: 'top' });
-    if (dispatchMap.getZoom() < 12) dispatchMap.setView(pos, 12);
-  }
-  function stopPlayback() {
-    if (playbackTimer) clearInterval(playbackTimer);
-    playbackTimer = null;
-    const b = $('dispatcherPlayButton');
-    if (b) b.textContent = '▶ Запустить учебное движение';
+  let playbackProgress = 0;
+  function pausePlayback() {
+    if (!playbackFrame) return;
+    playbackProgress = Math.min(1,(performance.now()-playbackStartedAt)/playbackDuration);
+    cancelAnimationFrame(playbackFrame); playbackFrame=null; playbackPaused=true;
+    const b=$('dispatcherPlayButton');if(b)b.textContent='▶ Продолжить движение';
+    const status=$('dispatcherVehicleStatus');if(status)status.textContent='Движение приостановлено';
   }
   function nextStop() {
-    const r = chosenDispatchRoute(); if (!r || !r.stops.length) return notify('Сначала выберите маршрут.');
-    stopPlayback(); playbackIndex = Math.min(playbackIndex + 1, r.stops.length - 1);
-    moveBusTo(playbackIndex); renderDispatchSchedule();
+    const r=chosenDispatchRoute();if(!r||!r.stops.length)return notify('Сначала выберите маршрут.');
+    stopPlayback();playbackIndex=Math.min(playbackIndex+1,r.stops.length-1);moveBusTo(playbackIndex);renderDispatchSchedule();
   }
   function bindUI() {
     if ($('dispatcherAddStops')) $('dispatcherAddStops').addEventListener('click', toggleAddStops);
@@ -281,9 +335,7 @@
     if ($('dispatcherRouteName')) $('dispatcherRouteName').addEventListener('change', saveRoute);
     if ($('dispatcherRunRoute')) $('dispatcherRunRoute').addEventListener('change', () => { stopPlayback(); playbackIndex = 0; renderDispatchMap(); });
     if ($('dispatcherPlayButton')) $('dispatcherPlayButton').addEventListener('click', () => {
-      if (playbackTimer) { stopPlayback(); const s = $('dispatcherVehicleStatus'); if (s) s.textContent = 'Учебное движение остановлено'; $('dispatcherPlayButton').textContent = '▶ Продолжить учебное движение'; }
-      else startPlayback();
-      const b = $('dispatcherPlayButton'); if (b && playbackTimer) b.textContent = 'Ⅱ Приостановить движение';
+      if (playbackFrame) pausePlayback(); else startPlayback();
     });
     if ($('dispatcherNextButton')) $('dispatcherNextButton').addEventListener('click', nextStop);
     if ($('dispatcherStopButton')) $('dispatcherStopButton').addEventListener('click', () => { stopPlayback(); playbackIndex = 0; moveBusTo(0); renderDispatchSchedule(); });
