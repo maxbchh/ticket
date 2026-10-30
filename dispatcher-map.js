@@ -114,8 +114,8 @@
     const marker = L.marker([stop.lat, stop.lng], { draggable: true }).addTo(editMap);
     bindEditMarker(stop, index, marker);
     editMarkers.push(marker);
-    refreshEditLine(true);
-    // Keep the map view stable while adding several stops.
+    refreshEditLine(false);
+    // During stop placement, update only the lightweight straight line. Road routing runs after Save.
   }
   function refreshEditLine(scheduleRoadLookup) {
     if (!editMap) return;
@@ -150,7 +150,7 @@
       bindEditMarker(s, i, marker);
       editMarkers.push(marker); points.push([s.lat, s.lng]);
     });
-    refreshEditLine(true);
+    refreshEditLine(false);
     if (points.length) editMap.fitBounds(L.latLngBounds(points).pad(.18), { maxZoom: 15 });
     setTimeout(() => editMap && editMap.invalidateSize(), 80);
   }
@@ -233,7 +233,8 @@
     const name = ($('dispatcherRouteName') && $('dispatcherRouteName').value.trim()) || r.name;
     r.name = name; r.updatedAt = new Date().toISOString();
     persist(); renderRouteList(); renderDispatchRouteOptions(); renderEditPanel();
-    notify('Маршрут «' + name + '» сохранён.');
+    refreshEditLine(true);
+    notify('Маршрут «' + name + '» сохранён. Дорожная линия будет построена после сохранения.');
   }
   function toggleAddStops() {
     addingStops = !addingStops;
