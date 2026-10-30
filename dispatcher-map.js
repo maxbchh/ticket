@@ -7,7 +7,7 @@
   const $ = id => document.getElementById(id);
   let editMap = null, dispatchMap = null, editMarkers = [], editLine = null;
   let dispatchMarkers = [], dispatchLine = null, busMarker = null, playbackTimer = null, playbackFrame = null, playbackIndex = 0, playbackStartedAt = 0, playbackDuration = 0, playbackPath = [], playbackFrom = 0, playbackTo = 1, playbackPaused = false, playbackPhase = 'idle', playbackProgress = 0, dwellRemaining = 15000, dwellStartedAt = 0, playbackToken = 0;
-  let editRouteId = '', addingStops = true, leafletPromise = null, editRouteRenderToken = 0, dispatchRouteRenderToken = 0;
+  let editRouteId = '', addingStops = true, leafletPromise = null, editRouteRenderToken = 0, dispatchRouteRenderToken = 0, editRoadTimer = null;
   let routes = loadRoutes();
 
   function loadRoutes() {
@@ -17,11 +17,9 @@
   function persist() {
     const active = routes.find(r => r.id === editRouteId);
     if (active) active.updatedAt = new Date().toISOString();
+    // cloud-sync.js already watches STORE and debounces localStorage writes.
+    // Do not force a second network sync here: repeated map clicks caused duplicate uploads.
     localStorage.setItem(STORE, JSON.stringify(routes));
-    if (typeof window.syncConductorData === 'function') {
-      clearTimeout(persist.syncTimer);
-      persist.syncTimer = setTimeout(() => { try { window.syncConductorData(); } catch (e) { console.warn(e); } }, 900);
-    }
   }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function id() { return 'maproute_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7); }
@@ -71,7 +69,11 @@
         const name = (nameInput && nameInput.value.trim()) || ('Остановка ' + (r.stops.length + 1));
         r.stops.push({ id: id(), name, lat: Number(e.latlng.lat.toFixed(6)), lng: Number(e.latlng.lng.toFixed(6)) });
         if (nameInput) nameInput.value = '';
-        persist(); renderEditPanel(); drawEditRoute(); renderDispatchRouteOptions();
+        persist();
+        appendEditStop(r.stops[r.stops.length - 1], r.stops.length - 1);
+        renderEditPanel();
+        renderRouteList();
+        renderDispatchRouteOptions();
         notify('Остановка добавлена. Переименуйте её в списке ниже.');
       });
       drawEditRoute();
@@ -98,32 +100,57 @@
     return fetch(url, { mode: 'cors' }).then(r => { if (!r.ok) throw new Error('routing unavailable'); return r.json(); })
       .then(data => data && data.code === 'Ok' && data.routes && data.routes[0] ? data.routes[0].geometry.coordinates.map(p => [p[1], p[0]]) : null);
   }
+  function bindEditMarker(stop, index, marker) {
+    marker.bindTooltip((index + 1) + '. ' + stop.name, { direction: 'top' });
+    marker.bindPopup('<strong>' + (index + 1) + '. ' + esc(stop.name) + '</strong><br><small>Перетащите маркер, чтобы уточнить место.</small>');
+    marker.on('dragend', e => {
+      const p = e.target.getLatLng();
+      stop.lat = Number(p.lat.toFixed(6)); stop.lng = Number(p.lng.toFixed(6));
+      persist(); drawEditRoute(); renderEditPanel();
+    });
+  }
+  function appendEditStop(stop, index) {
+    if (!editMap || !stop) return;
+    const marker = L.marker([stop.lat, stop.lng], { draggable: true }).addTo(editMap);
+    bindEditMarker(stop, index, marker);
+    editMarkers.push(marker);
+    refreshEditLine(true);
+    // Keep the map view stable while adding several stops.
+  }
+  function refreshEditLine(scheduleRoadLookup) {
+    if (!editMap) return;
+    const r = currentEditRoute();
+    if (!r) return;
+    const points = r.stops.map(s => [s.lat, s.lng]);
+    if (editLine) editMap.removeLayer(editLine);
+    editLine = null;
+    const style = { color: '#1677ff', weight: 5, opacity: .85 };
+    if (points.length > 1) editLine = L.polyline(points, style).addTo(editMap);
+    const token = ++editRouteRenderToken;
+    if (editRoadTimer) clearTimeout(editRoadTimer);
+    if (scheduleRoadLookup && points.length > 1) {
+      editRoadTimer = setTimeout(() => {
+        roadGeometry(points).then(road => {
+          if (!road || token !== editRouteRenderToken || !editMap || !currentEditRoute() || currentEditRoute().id !== r.id) return;
+          if (editLine) editMap.removeLayer(editLine);
+          editLine = L.polyline(road, style).addTo(editMap);
+        }).catch(() => {});
+      }, 1400);
+    }
+  }
   function drawEditRoute() {
     if (!editMap || !$('dispatcherEditMap')) return;
     editLine = removeLayers(editMap, editMarkers, editLine);
-    const routeToken = ++editRouteRenderToken;
+    if (editRoadTimer) { clearTimeout(editRoadTimer); editRoadTimer = null; }
     const r = currentEditRoute();
     if (!r) return;
     const points = [];
     r.stops.forEach((s, i) => {
       const marker = L.marker([s.lat, s.lng], { draggable: true }).addTo(editMap);
-      marker.bindTooltip((i + 1) + '. ' + s.name, { direction: 'top' });
-      marker.bindPopup('<strong>' + (i + 1) + '. ' + esc(s.name) + '</strong><br><small>Перетащите маркер, чтобы уточнить место.</small>');
-      marker.on('dragend', e => {
-        const p = e.target.getLatLng(); s.lat = Number(p.lat.toFixed(6)); s.lng = Number(p.lng.toFixed(6));
-        persist(); drawEditRoute(); renderEditPanel();
-      });
+      bindEditMarker(s, i, marker);
       editMarkers.push(marker); points.push([s.lat, s.lng]);
     });
-    if (points.length > 1) {
-      const style = { color: '#1677ff', weight: 5, opacity: .85 };
-      editLine = L.polyline(points, style).addTo(editMap);
-      roadGeometry(points).then(road => {
-        if (!road || routeToken !== editRouteRenderToken || !editMap) return;
-        if (editLine) editMap.removeLayer(editLine);
-        editLine = L.polyline(road, style).addTo(editMap);
-      }).catch(() => {});
-    }
+    refreshEditLine(true);
     if (points.length) editMap.fitBounds(L.latLngBounds(points).pad(.18), { maxZoom: 15 });
     setTimeout(() => editMap && editMap.invalidateSize(), 80);
   }
@@ -220,7 +247,6 @@
       el.innerHTML = '<option value="">— Выберите маршрут —</option>' + routes.map(r => '<option value="' + esc(r.id) + '">' + esc(r.name) + ' (' + r.stops.length + ')</option>').join('');
       if (routes.some(r => r.id === old)) el.value = old;
     });
-    renderDispatchMap();
   }
   function chosenDispatchRoute() {
     const s = $('dispatcherRunRoute'); return routes.find(r => r.id === (s && s.value)) || null;
