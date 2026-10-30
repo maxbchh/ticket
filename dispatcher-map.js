@@ -69,7 +69,7 @@
         if (!r) { notify('Сначала создайте новый маршрут или выберите сохранённый.'); return; }
         const nameInput = $('dispatcherNewStopName');
         const name = (nameInput && nameInput.value.trim()) || ('Остановка ' + (r.stops.length + 1));
-        r.stops.push({ id: id(), name, lat: Number(e.latlng.lat.toFixed(6)), lng: Number(e.latlng.lng.toFixed(6)), travelMinutes: null });
+        r.stops.push({ id: id(), name, lat: Number(e.latlng.lat.toFixed(6)), lng: Number(e.latlng.lng.toFixed(6)) });
         if (nameInput) nameInput.value = '';
         persist(); renderEditPanel(); drawEditRoute(); renderDispatchRouteOptions();
         notify('Остановка добавлена. Переименуйте её в списке ниже.');
