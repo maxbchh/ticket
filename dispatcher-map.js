@@ -374,8 +374,14 @@
     const status = $('dispatcherVehicleStatus'); if (status) status.textContent = 'Движение приостановлено';
   }
   function nextStop() {
-    const r=chosenDispatchRoute();if(!r||!r.stops.length)return notify('Сначала выберите маршрут.');
-    stopPlayback();playbackIndex=Math.min(playbackIndex+1,r.stops.length-1);moveBusTo(playbackIndex);renderDispatchSchedule();
+    const r = chosenDispatchRoute();
+    if (!r || !r.stops.length) return notify('Сначала выберите маршрут.');
+    if (playbackPhase === 'moving' || playbackPhase === 'loading' || playbackPhase === 'pausedMoving') return notify('Автобус уже находится в пути. Дождись следующей остановки.');
+    if (playbackIndex >= r.stops.length - 1) return notify('Автобус уже на конечной остановке.');
+    stopPlayback();
+    moveBusTo(playbackIndex);
+    renderDispatchSchedule();
+    beginNextLeg(playbackToken);
   }
   function bindUI() {
     if ($('dispatcherAddStops')) $('dispatcherAddStops').addEventListener('click', toggleAddStops);
