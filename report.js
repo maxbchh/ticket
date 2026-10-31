@@ -16,8 +16,8 @@
   function shift(){return read(DRIVER_KEY,null)}
   function tickets(){const x=read(TICKETS_KEY,[]);return Array.isArray(x)?x:[]}
   function sales(){const x=read(BUFFET_KEY,[]);return Array.isArray(x)?x:[]}
-  function archives(){const z=read('ticket_z_report_v1',null);return z&&typeof z==='object'?[z]:[]}
-  function saveArchives(list){const z=read('ticket_z_report_v1',null);if(z){const u=(list||[]).find(x=>String(x.id)===String(z.id));if(u)write('ticket_z_report_v1',u)}write(ARCHIVES_KEY,(list||[]).slice(-1))}
+  function archives(){const saved=read(ARCHIVES_KEY,[]);const list=Array.isArray(saved)?saved.slice():[];const z=read('ticket_z_report_v1',null);if(z&&typeof z==='object'&&!list.some(x=>String(x.id)===String(z.id)))list.push(z);return list}
+  function saveArchives(list){const all=Array.isArray(list)?list.slice():[];const z=read('ticket_z_report_v1',null);if(z){const u=all.find(x=>String(x.id)===String(z.id));if(u)write('ticket_z_report_v1',u)}write(ARCHIVES_KEY,all)}
   function ticketKey(t){return String((t&&(t.num??t.number??t.id??t.purchaseId))??JSON.stringify(t||{}))}
   function saleKey(s){return String((s&&(s.id??s.saleId??s.purchaseId))??[s&&s.name,s&&s.time,s&&s.total,s&&s.quantity].join('|'))}
   function tripId(s){return (s&&(s.tripId||s.reportTripId||s.currentTripId))||null}
