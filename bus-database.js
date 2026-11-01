@@ -376,6 +376,8 @@ function boot(){
  }
  document.addEventListener('ticket-city-change',()=>{populateShiftSelector();render()});
  window.addEventListener('focus',refresh);
+ // On startup, push an already-filled fleet back to Supabase after the first pull.
+ if(d.vehicles.length||d.stops.length)setTimeout(()=>{if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync()},1800);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 window.TicketBusDatabase={
