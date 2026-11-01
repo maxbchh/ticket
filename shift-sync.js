@@ -24,6 +24,9 @@ async function syncShift(){
   var rows=await get.json(),data=rows&&rows[0]&&rows[0].data||{};
   var copy=shift?Object.assign({},shift,{updatedAt:shift.updatedAt||new Date().toISOString()}):null;
   data.driverShift=copy;
+  var localArchives=[];try{localArchives=JSON.parse(localStorage.getItem('ticket_report_archives_v1')||'[]')}catch(_){}
+  var archiveMap=new Map();[...(Array.isArray(data.reportArchives)?data.reportArchives:[]),...(Array.isArray(localArchives)?localArchives:[])].forEach(function(x){if(x&&x.id){var id=String(x.id),old=archiveMap.get(id);if(!old||(Date.parse(x.finishedAt||x.updatedAt||'')||0)>=(Date.parse(old.finishedAt||old.updatedAt||'')||0))archiveMap.set(id,x)}});
+  data.reportArchives=Array.from(archiveMap.values()).sort(function(a,b){return (Date.parse(a.finishedAt||a.startedAt||'')||0)-(Date.parse(b.finishedAt||b.startedAt||'')||0)}).slice(-500);
   var save=await fetch(ENDPOINT,{method:'POST',headers:Object.assign({},h,{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({id:'main',data:data,updated_at:new Date().toISOString()})});
   if(!save.ok)throw Error('POST '+save.status);
   lastLocal=raw;
