@@ -1652,6 +1652,7 @@ function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':
     return;
    }
    if(remote.status==='approved'){
+    if(typeof state==='undefined'||!state.shiftActive){const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Оплата получена · откройте кассовую смену';const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Терминал подтвердил оплату. Для выпуска билета откройте кассовую смену; повторно карту прикладывать не нужно.';return;}
     local.pending=remote;local.updatedAt=new Date().toISOString();localStorage.setItem(VS_KEY,JSON.stringify(local));
     const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Карта принята';
     const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Подтверждение получено от терминала. Выпускаем билет…';
@@ -1662,7 +1663,7 @@ function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':
     }
    }else if(remote.status==='completed'){
     local.pending=remote;local.updatedAt=new Date().toISOString();localStorage.setItem(VS_KEY,JSON.stringify(local));
-    const hasTicket=(window.state?.tickets||[]).some(t=>String(t.cardPaymentRequestId||'')===String(expectedId));
+    const hasTicket=(typeof state!=='undefined'&&Array.isArray(state.tickets)?state.tickets:[]).some(t=>String(t.cardPaymentRequestId||'')===String(expectedId));
     if(hasTicket){
       localStorage.setItem('ticket_card_payment_last_completed',String(expectedId));
       localStorage.removeItem('ticket_card_payment_request_id');
