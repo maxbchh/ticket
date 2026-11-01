@@ -12,6 +12,7 @@ const STATUSES=['В эксплуатации','На рейсе','Не в экс�
 let activeView='fleet';
 let sortField='number',sortAsc=true;
 let selectedVehicles=new Set();
+let lastDatabaseSnapshot='';
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function canonicalCity(v){const s=String(v||'').trim().toLocaleLowerCase('ru-RU');if(s==='новоозерск'||s==='новоозёрск')return 'Новоозёрск';return s==='тверь'?'Тверь':(CITIES.includes(v)?v:'Тверь');}
 function db(){
@@ -318,6 +319,7 @@ function setCity(value){
 }
 function refresh(){if(!db())return;if($('busDbCity'))$('busDbCity').value=city();if($('newRouteCity'))$('newRouteCity').value=city();render();populateShiftSelector();refreshOtherViews();}
 function wrapRoutePair(){const original=window.saveRoutePair;if(typeof original!=='function'||original.__busDbCityWrapped)return;const wrapped=function(){const selectedCity=canonicalCity($('newRouteCity')?.value||city()),before=new Set(routes().map(r=>String(r.id)));let editId=null;try{if(typeof editingRouteId!=='undefined')editId=editingRouteId}catch(_){}const result=original.apply(this,arguments);routes().forEach(r=>{if(!before.has(String(r.id))||String(r.id)===String(editId))r.city=selectedCity});saveRoutesOnly();return result};wrapped.__busDbCityWrapped=true;window.saveRoutePair=wrapped;}
+function watchRemoteChanges(){const snapshot=()=>{try{return JSON.stringify({db:db(),routes:routes()})}catch(_){return ''}};lastDatabaseSnapshot=snapshot();setInterval(()=>{const next=snapshot();if(next&&next!==lastDatabaseSnapshot){lastDatabaseSnapshot=next;render();populateShiftSelector();refreshOtherViews()}},2500)}
 function boot(){
  if(!db())return;
  const d=db();
@@ -327,7 +329,7 @@ function boot(){
  const citySel=$('busDbCity');
  if(citySel){citySel.value=d.selectedCity||'Тверь';citySel.onchange=()=>setCity(citySel.value)}
  document.querySelectorAll('[data-bus-view]').forEach(b=>b.onclick=()=>setView(b.dataset.busView));
- connectShift();populateShiftSelector();wrapShift();wrapRoutePair();render();refreshOtherViews();
+ connectShift();populateShiftSelector();wrapShift();wrapRoutePair();render();refreshOtherViews();watchRemoteChanges();
  if(state.driverShift?.active&&state.driverShift.vehicleId){
   const v=db().vehicles.find(x=>String(x.id)===String(state.driverShift.vehicleId));
   if(v&&v.status==='В эксплуатации'){v.status='На рейсе';v.updatedAt=now();save()}
