@@ -706,7 +706,7 @@ function refundBatch(){
     let vs={cards:[],transactions:[],pending:null};try{vs=JSON.parse(localStorage.getItem('ticket_virtual_system_v1')||'{}')}catch(_){}
     const route=document.getElementById('routeSelect'),from=document.getElementById('stationFrom'),to=document.getElementById('stationTo'),passenger=document.getElementById('passengerType');
     const existing=vs.pending,age=existing?Date.now()-(Date.parse(existing.createdAt||'')||0):Infinity;
-    const reusable=existing&&['requested','approved'].includes(existing.status)&&age>=0&&age<300000&&Math.abs(Number(existing.amount||0)-cashPrice())<.001;
+    const reusable=existing&&Math.abs(Number(existing.amount||0)-cashPrice())<.001&&(existing.status==='approved'||(existing.status==='requested'&&age>=0&&age<300000));
     if(!reusable){
       vs.pending={id:'cashreq_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),status:'requested',source:'cashier',amount:cashPrice(),createdAt:new Date().toISOString(),routeName:route?.selectedOptions?.[0]?.text||'',from:from?.selectedOptions?.[0]?.text||'',to:to?.selectedOptions?.[0]?.text||'',quantity:Math.max(1,Math.floor(Number(document.getElementById('ticketQuantity')?.value||1))),passengerType:passenger?.value||'full'};
     }
@@ -1636,7 +1636,8 @@ function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':
  async function poll(){
   if(busy||window.__cashPaymentMethod!=='card')return;
   const modal=document.getElementById('cashRegisterModal');if(!modal||modal.hidden)return;
-  const expectedId=localStorage.getItem('ticket_card_payment_request_id');
+  let expectedId=localStorage.getItem('ticket_card_payment_request_id');
+  if(!expectedId){try{const local=JSON.parse(localStorage.getItem(VS_KEY)||'{}');expectedId=local.pending?.id||'';}catch(_){}}
   if(!expectedId)return;
   busy=true;
   try{
