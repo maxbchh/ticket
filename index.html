@@ -705,56 +705,88 @@ function refundBatch(){
     if(method) method.textContent = 'Карта';
     let vs={cards:[],transactions:[],pending:null};try{vs=JSON.parse(localStorage.getItem('ticket_virtual_system_v1')||'{}')}catch(_){}
     const route=document.getElementById('routeSelect'),from=document.getElementById('stationFrom'),to=document.getElementById('stationTo'),passenger=document.getElementById('passengerType');
-    vs.pending={id:'cashreq_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),status:'requested',source:'cashier',amount:cashPrice(),createdAt:new Date().toISOString(),routeName:route?.selectedOptions?.[0]?.text||'',from:from?.selectedOptions?.[0]?.text||'',to:to?.selectedOptions?.[0]?.text||'',quantity:Math.max(1,Math.floor(Number(document.getElementById('ticketQuantity')?.value||1))),passengerType:passenger?.value||'full'};
+    const existing=vs.pending,age=existing?Date.now()-(Date.parse(existing.createdAt||'')||0):Infinity;
+    const reusable=existing&&['requested','approved'].includes(existing.status)&&age>=0&&age<300000&&Math.abs(Number(existing.amount||0)-cashPrice())<.001;
+    if(!reusable){
+      vs.pending={id:'cashreq_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),status:'requested',source:'cashier',amount:cashPrice(),createdAt:new Date().toISOString(),routeName:route?.selectedOptions?.[0]?.text||'',from:from?.selectedOptions?.[0]?.text||'',to:to?.selectedOptions?.[0]?.text||'',quantity:Math.max(1,Math.floor(Number(document.getElementById('ticketQuantity')?.value||1))),passengerType:passenger?.value||'full'};
+    }
+    localStorage.setItem('ticket_card_payment_request_id',String(vs.pending.id));
     vs.updatedAt=new Date().toISOString();localStorage.setItem('ticket_virtual_system_v1',JSON.stringify(vs));
     updateCashRegister();
-    const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Ожидание карты на терминале';
+    const status=document.getElementById('cashPaymentStatus');if(status)status.textContent=vs.pending.status==='approved'?'Карта принята · выпускаем билет':'Ожидание карты на терминале';
     const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Сумма '+cashPrice().toFixed(2)+' BYN отправлена на виртуальный терминал. Приложите карту на другом устройстве.';
   };
 
   window.confirmCashPayment = function(){
-    const price = cashPrice();
-    const received = Math.max(0, Number(document.getElementById('cashReceivedInput')?.value || 0));
-
-    if(!state.shiftActive){
-      alert("Сначала откройте смену во вкладке «Журнал & Z-Отчёт».");
-      return;
-    }
-    if(window.__cashPaymentMethod === 'cash' && received < price){
-      alert('Недостаточно денег для оплаты билета.');
-      return;
-    }
+    const method=window.__cashPaymentMethod;
+    if(method===null)return false;
+    const price=cashPrice();
+    const received=Math.max(0,Number(document.getElementById('cashReceivedInput')?.value||0));
+    if(!state.shiftActive){alert("Сначала откройте кассовую смену во вкладке «Журнал & Z-Отчёт».");return false;}
+    if(method==='cash'&&received<price){alert('Недостаточно денег для оплаты билета.');return false;}
     let cardRequest=null;
-    if(window.__cashPaymentMethod === 'card'){
+    if(method==='card'){
       try{const vs=JSON.parse(localStorage.getItem('ticket_virtual_system_v1')||'{}');cardRequest=vs.pending||null}catch(_){}
-      if(!cardRequest||cardRequest.status!=='approved'||Math.abs(Number(cardRequest.amount||0)-price)>.001){const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Сначала приложите карту к открытому терминалу и дождитесь подтверждения.';return;}
-    }
-
-    const before = Number(state.lastTicketNum);
-    const countBefore = state.tickets.length;
-
-    window.processTicketSale();
-
-    const issued = state.tickets.length > countBefore ||
-      Number(state.lastTicketNum) !== before;
-
-    if(issued){
-      if(window.__cashPaymentMethod==='card'){
-        const rows=Array.isArray(state.tickets)?state.tickets:[];
-        rows.slice(countBefore).forEach(t=>{t.paymentMethod='card';t.cardPaymentRequestId=cardRequest?.id||'';});
-        localStorage.setItem('conductor_tickets',JSON.stringify(rows));
-        const vs=JSON.parse(localStorage.getItem('ticket_virtual_system_v1')||'{}');
-        if(vs.pending&&vs.pending.id===cardRequest?.id)vs.pending={...vs.pending,status:'completed',completedAt:new Date().toISOString()};
-        vs.updatedAt=new Date().toISOString();localStorage.setItem('ticket_virtual_system_v1',JSON.stringify(vs));
+      const expectedId=localStorage.getItem('ticket_card_payment_request_id')||'';
+      if(!cardRequest||!cardRequest.id||(expectedId&&String(expectedId)!==String(cardRequest.id))){
+        const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Не найден исходный запрос оплаты. Не прикладывайте карту повторно — обновите кассу и проверьте историю.';
+        return false;
       }
-      window.closeCashRegister();
-      window.__cashPaymentMethod = null;
-      const quantityInput=document.getElementById('ticketQuantity');
-      if(quantityInput){quantityInput.value='1';quantityInput.dispatchEvent(new Event('input',{bubbles:true}));}
-      const passenger=document.getElementById('passengerType');
-      if(passenger){passenger.value='full';passenger.dispatchEvent(new Event('change',{bubbles:true}));}
-      if(window.updateCashSaleSummary)window.updateCashSaleSummary();
+      const alreadyIssued=(state.tickets||[]).some(t=>String(t.cardPaymentRequestId||'')===String(cardRequest.id));
+      if(cardRequest.status==='completed'||alreadyIssued){
+        if(cardRequest.status!=='completed'){
+          const vs=JSON.parse(localStorage.getItem('ticket_virtual_system_v1')||'{}');
+          if(vs.pending&&String(vs.pending.id)===String(cardRequest.id))vs.pending={...vs.pending,status:'completed',completedAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+          vs.updatedAt=new Date().toISOString();localStorage.setItem('ticket_virtual_system_v1',JSON.stringify(vs));
+        }
+        localStorage.setItem('ticket_card_payment_last_completed',String(cardRequest.id));
+        localStorage.removeItem('ticket_card_payment_request_id');
+        window.closeCashRegister();window.__cashPaymentMethod=null;
+        return true;
+      }
+      if(cardRequest.status!=='approved'||Math.abs(Number(cardRequest.amount||0)-price)>.001){
+        const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Касса ещё не получила подтверждение оплаты. Подождите синхронизацию; повторно карту не прикладывайте.';
+        return false;
+      }
     }
+    const before=Number(state.lastTicketNum);
+    const countBefore=Array.isArray(state.tickets)?state.tickets.length:0;
+    try{window.processTicketSale()}catch(error){
+      console.error('Ошибка выпуска оплаченного билета:',error);
+      const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Оплата подтверждена, но произошла ошибка выпуска билета. Не прикладывайте карту повторно — можно повторить выпуск после исправления ошибки.';
+      return false;
+    }
+    const issued=(state.tickets||[]).length>countBefore||Number(state.lastTicketNum)!==before;
+    if(!issued){
+      if(method==='card'){
+        const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Оплачено · ожидает выпуска билета';
+        const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Деньги уже списаны. Подтверждение сохранено. Не прикладывайте карту повторно; попробуйте выпустить билет ещё раз.';
+      }
+      return false;
+    }
+    if(method==='card'){
+      const rows=Array.isArray(state.tickets)?state.tickets:[];
+      rows.slice(countBefore).forEach(t=>{
+        t.paymentMethod='card';t.paymentStatus='Оплачено';t.cardPaymentRequestId=String(cardRequest.id);
+      });
+      localStorage.setItem('conductor_tickets',JSON.stringify(rows));
+      const vs=JSON.parse(localStorage.getItem('ticket_virtual_system_v1')||'{}');
+      if(vs.pending&&String(vs.pending.id)===String(cardRequest.id)){
+        vs.pending={...vs.pending,status:'completed',completedAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+      }
+      vs.updatedAt=new Date().toISOString();localStorage.setItem('ticket_virtual_system_v1',JSON.stringify(vs));
+      localStorage.setItem('ticket_card_payment_last_completed',String(cardRequest.id));
+      localStorage.removeItem('ticket_card_payment_request_id');
+      if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync();
+    }
+    window.closeCashRegister();
+    window.__cashPaymentMethod=null;
+    const quantityInput=document.getElementById('ticketQuantity');
+    if(quantityInput){quantityInput.value='1';quantityInput.dispatchEvent(new Event('input',{bubbles:true}));}
+    const passenger=document.getElementById('passengerType');
+    if(passenger){passenger.value='full';passenger.dispatchEvent(new Event('change',{bubbles:true}));}
+    if(window.updateCashSaleSummary)window.updateCashSaleSummary();
+    return true;
   };
 
   document.addEventListener('keydown', function(e){
@@ -1598,27 +1630,52 @@ function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':
 </script><script id="ticket-card-payment-poll">
 (function(){
  const URL='https://ubhfigqpsepnpokrbdyo.supabase.co/rest/v1/ticket_shared_state?select=data&id=eq.main';
- const KEY='sb_publishable_yN8W8pvQq8hWsYMO8z1Rzw_6zKQ-8D1';let busy=false,done='';
+ const KEY='sb_publishable_yN8W8pvQq8hWsYMO8z1Rzw_6zKQ-8D1';
+ const VS_KEY='ticket_virtual_system_v1';
+ let busy=false;
  async function poll(){
   if(busy||window.__cashPaymentMethod!=='card')return;
   const modal=document.getElementById('cashRegisterModal');if(!modal||modal.hidden)return;
-  busy=true;try{
-   const r=await fetch(URL,{headers:{apikey:KEY,Authorization:'Bearer '+KEY},cache:'no-store'});if(!r.ok)throw Error('GET '+r.status);
-   const rows=await r.json(),remote=rows?.[0]?.data?.virtualSystem?.pending;
-   if(remote&&remote.id){
-    let local={};try{local=JSON.parse(localStorage.getItem('ticket_virtual_system_v1')||'{}')}catch(_){}
-    if(local.pending?.id===remote.id&&remote.status==='declined'){
-     const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Отказ карты';
-     const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Оплата не прошла. Проверьте баланс карты и повторите попытку.';
-    }else if(local.pending?.id===remote.id&&remote.status==='approved'&&remote.id!==done){
-     local.pending=remote;local.updatedAt=new Date().toISOString();localStorage.setItem('ticket_virtual_system_v1',JSON.stringify(local));
-     done=remote.id;const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Карта принята';
-     const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Оплата подтверждена терминалом. Выпускаем билеты…';
-     window.confirmCashPayment();
+  const expectedId=localStorage.getItem('ticket_card_payment_request_id');
+  if(!expectedId)return;
+  busy=true;
+  try{
+   const response=await fetch(URL,{headers:{apikey:KEY,Authorization:'Bearer '+KEY},cache:'no-store'});
+   if(!response.ok)throw Error('GET '+response.status);
+   const rows=await response.json(),remote=rows?.[0]?.data?.virtualSystem?.pending;
+   if(!remote||String(remote.id)!==String(expectedId))return;
+   let local={};try{local=JSON.parse(localStorage.getItem(VS_KEY)||'{}')}catch(_){}
+   if(remote.status==='declined'){
+    local.pending=remote;local.updatedAt=new Date().toISOString();localStorage.setItem(VS_KEY,JSON.stringify(local));
+    const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Отказ карты';
+    const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Оплата не прошла: '+String(remote.declineReason||'терминал отклонил карту');
+    return;
+   }
+   if(remote.status==='approved'){
+    local.pending=remote;local.updatedAt=new Date().toISOString();localStorage.setItem(VS_KEY,JSON.stringify(local));
+    const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Карта принята';
+    const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Подтверждение получено от терминала. Выпускаем билет…';
+    const issued=window.confirmCashPayment();
+    if(!issued){
+      const message=document.getElementById('cashRegisterMessage');
+      if(message&&(!message.textContent||message.textContent.includes('Подтверждение получено')))message.textContent='Оплата подтверждена. Касса сохраняет продажу; не прикладывайте карту повторно.';
+    }
+   }else if(remote.status==='completed'){
+    local.pending=remote;local.updatedAt=new Date().toISOString();localStorage.setItem(VS_KEY,JSON.stringify(local));
+    const hasTicket=(window.state?.tickets||[]).some(t=>String(t.cardPaymentRequestId||'')===String(expectedId));
+    if(hasTicket){
+      localStorage.setItem('ticket_card_payment_last_completed',String(expectedId));
+      localStorage.removeItem('ticket_card_payment_request_id');
+      window.closeCashRegister();window.__cashPaymentMethod=null;
     }
    }
-  }catch(e){console.warn('Ожидание оплаты картой:',e)}finally{busy=false}
+  }catch(error){
+   console.warn('Ожидание оплаты картой:',error);
+   const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Проблема связи · повторная проверка';
+   const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Связь с терминалом прервана. Оплата не подтверждена кассой; не прикладывайте карту повторно, пока статус не обновится.';
+  }finally{busy=false}
  }
- setInterval(poll,1100);
+ setInterval(poll,900);
+ poll();
 })();
 </script><script src="./bus-database.js"></script></body></html>
