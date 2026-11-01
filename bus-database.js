@@ -328,7 +328,7 @@ function setCity(value){
  render();populateShiftSelector();refreshOtherViews();
  document.dispatchEvent(new CustomEvent('ticket-city-change',{detail:{city:next}}));
 }
-function refresh(){if(!db())return;if($('busDbCity'))$('busDbCity').value=city();if($('newRouteCity'))$('newRouteCity').value=city();render();populateShiftSelector();refreshOtherViews();}
+function refresh(resetView=false){if(!db())return;if($('busDbCity'))$('busDbCity').value=city();if($('newRouteCity'))$('newRouteCity').value=city();if(resetView)setView('fleet');else render();populateShiftSelector();refreshOtherViews();}
 function wrapRoutePair(){
  const original=window.saveRoutePair;
  if(typeof original!=='function'||original.__busDbCityWrapped)return;
@@ -369,7 +369,7 @@ function boot(){
  if(citySel){citySel.value=d.selectedCity||'Тверь';citySel.onchange=()=>setCity(citySel.value)}
  if($('newRouteCity')){$('newRouteCity').value=d.selectedCity||'Тверь';$('newRouteCity').onchange=()=>setCity($('newRouteCity').value)}
  document.querySelectorAll('[data-bus-view]').forEach(b=>b.onclick=()=>setView(b.dataset.busView));
- connectShift();populateShiftSelector();wrapShift();wrapRoutePair();render();refreshOtherViews();watchRemoteChanges();
+ connectShift();populateShiftSelector();wrapShift();wrapRoutePair();setView('fleet');refreshOtherViews();watchRemoteChanges();
  if(state.driverShift?.active&&state.driverShift.vehicleId){
   const v=db().vehicles.find(x=>String(x.id)===String(state.driverShift.vehicleId));
   if(v&&v.status==='В эксплуатации'){v.status='На рейсе';v.updatedAt=now();save()}
