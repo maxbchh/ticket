@@ -367,7 +367,7 @@ function boot(){
  ensureNovoozyorskRoutes();
  const citySel=$('busDbCity');
  if(citySel){citySel.value=d.selectedCity||'Тверь';citySel.onchange=()=>setCity(citySel.value)}
- if($('newRouteCity'))$('newRouteCity').value=d.selectedCity||'Тверь'
+ if($('newRouteCity')){$('newRouteCity').value=d.selectedCity||'Тверь';$('newRouteCity').onchange=()=>setCity($('newRouteCity').value)}
  document.querySelectorAll('[data-bus-view]').forEach(b=>b.onclick=()=>setView(b.dataset.busView));
  connectShift();populateShiftSelector();wrapShift();wrapRoutePair();render();refreshOtherViews();watchRemoteChanges();
  if(state.driverShift?.active&&state.driverShift.vehicleId){
