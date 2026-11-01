@@ -61,4 +61,23 @@ document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.query
 const canvas=$('artCanvas'),ctx=canvas.getContext('2d');ctx.fillStyle='#dce8f8';ctx.fillRect(0,0,canvas.width,canvas.height);let painting=false;function point(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*canvas.width/r.width,y:(e.clientY-r.top)*canvas.height/r.height}}canvas.addEventListener('pointerdown',e=>{painting=true;canvas.setPointerCapture(e.pointerId);const p=point(e);ctx.beginPath();ctx.moveTo(p.x,p.y)});canvas.addEventListener('pointermove',e=>{if(!painting)return;const p=point(e);ctx.lineWidth=7;ctx.lineCap='round';ctx.strokeStyle=$('cardColor').value;ctx.lineTo(p.x,p.y);ctx.stroke()});canvas.addEventListener('pointerup',()=>painting=false);$('clearArt').onclick=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#dce8f8';ctx.fillRect(0,0,canvas.width,canvas.height)};$('useArt').onclick=()=>{activeImage=canvas.toDataURL('image/jpeg',.7);alert('Рисунок установлен как фон карты. Теперь сохрани карту.')};
 window.addEventListener('storage',e=>{if(e.key===KEY)render()});setInterval(()=>{const s=read(),sig=JSON.stringify({u:s.updatedAt,c:s.cards.length,t:s.transactions.length,p:s.pending&&s.pending.id});if(sig!==lastSignature){lastSignature=sig;render()}},1500);render();
 })();
+</script><script id="ticket-card-terminal-poll">
+(function(){
+ const URL='https://ubhfigqpsepnpokrbdyo.supabase.co/rest/v1/ticket_shared_state?select=data&id=eq.main';
+ const KEY='sb_publishable_yN8W8pvQq8hWsYMO8z1Rzw_6zKQ-8D1';let busy=false,last='';
+ async function poll(){
+  if(busy)return;busy=true;try{
+   const r=await fetch(URL,{headers:{apikey:KEY,Authorization:'Bearer '+KEY},cache:'no-store'});if(!r.ok)throw Error('GET '+r.status);
+   const rows=await r.json(),p=rows?.[0]?.data?.virtualSystem?.pending;
+   if(p&&p.status==='requested'&&Date.now()-Date.parse(p.createdAt||'')<300000&&p.id!==last){
+    last=p.id;amountDigits=String(Math.round(Number(p.amount||0)*100));mode='waiting';
+    $('screenLabel').textContent='ОПЛАТА ПОЕЗДКИ';$('screenSub').textContent=(p.routeName||'Поездка')+' · '+money(p.amount)+' BYN';
+    $('terminalNotice').className='notice';$('terminalNotice').textContent='Запрос оплаты с кассы · '+money(p.amount)+' BYN';render();
+   }else if((!p||['completed','declined','cancelled'].includes(p.status))&&mode==='waiting'){
+    amountDigits='';mode='entry';$('screenLabel').textContent='Введите сумму';$('screenSub').textContent='Ожидание оплаты';$('terminalNotice').classList.add('hidden');render();
+   }
+  }catch(e){console.warn('Запрос оплаты кассы:',e)}finally{busy=false}
+ }
+ setInterval(poll,1000);poll();
+})();
 </script></body></html>
