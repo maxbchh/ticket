@@ -243,7 +243,8 @@ function importVehicles(e){
    const data=JSON.parse(reader.result);if(!Array.isArray(data))throw Error('Ожидается JSON-массив автобусов.');
    const incoming=data.map(v=>({id:String(v.id||uid('bus')),number:String(v.number||v.boardNumber||'').trim(),model:String(v.model||v.series||'').trim(),city:city(),buildDate:String(v.buildDate||v.buildDate||''),status:STATUSES.includes(v.status)?v.status:'В эксплуатации',routes:Array.isArray(v.routes)?v.routes:String(v.routes||'').split(',').map(x=>x.trim()).filter(Boolean),note:String(v.note||v.notes||''),updatedAt:now()})).filter(v=>v.number&&v.model);
    const keep=db().vehicles.filter(v=>canonicalCity(v.city)!==city());
-   db().vehicles=[...keep,...incoming];db().deletedVehicleIds=[];
+   const importedIds=new Set(incoming.map(v=>String(v.id)));
+   db().vehicles=[...keep,...incoming];db().deletedVehicleIds=db().deletedVehicleIds.filter(id=>!importedIds.has(String(id)));
    selectedVehicles.clear();save();alert('Импортировано автобусов: '+incoming.length);
   }catch(err){alert('Не удалось импортировать базу: '+err.message)}
   e.target.value='';
