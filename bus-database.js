@@ -4,11 +4,11 @@ const $=id=>document.getElementById(id);
 const STATUSES=['В эксплуатации','На рейсе','Не в эксплуатации','Ремонт','Капитальный ремонт','Списан','Выведен из эксплуатации'];
 const CITIES=['Тверь','Новоозёрск'];
 let activeView='routes';
-function db(){if(typeof state==='undefined')return null;if(!state.busDatabase||typeof state.busDatabase!=='object')state.busDatabase={vehicles:[],stops:[]};if(!Array.isArray(state.busDatabase.vehicles))state.busDatabase.vehicles=[];if(!Array.isArray(state.busDatabase.stops))state.busDatabase.stops=[];return state.busDatabase}
+function db(){if(typeof state==='undefined')return null;if(!state.busDatabase||typeof state.busDatabase!=='object'){try{state.busDatabase=JSON.parse(localStorage.getItem('ticket_bus_database_v1')||'null')}catch(_){state.busDatabase=null}if(!state.busDatabase||typeof state.busDatabase!=='object')state.busDatabase={vehicles:[],stops:[]};}if(!Array.isArray(state.busDatabase.vehicles))state.busDatabase.vehicles=[];if(!Array.isArray(state.busDatabase.stops))state.busDatabase.stops=[];return state.busDatabase}
 function city(){return $('busDbCity')?.value||'Тверь'}
 function uid(prefix){return prefix+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7)}
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function save(){try{if(typeof window.persist==='function')window.persist();if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync();if(typeof window.renderRoutesTable==='function')window.renderRoutesTable();if(typeof window.updateRouteDropdowns==='function')window.updateRouteDropdowns();}catch(e){console.warn('Bus database save:',e)}render();populateShiftSelector()}
+function save(){try{db().updatedAt=new Date().toISOString();localStorage.setItem('ticket_bus_database_v1',JSON.stringify(db()));if(typeof window.persist==='function')window.persist();if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync();if(typeof window.renderRoutesTable==='function')window.renderRoutesTable();if(typeof window.updateRouteDropdowns==='function')window.updateRouteDropdowns();}catch(e){console.warn('Bus database save:',e)}render();populateShiftSelector()}
 function routes(){return Array.isArray(state.routes)?state.routes:[]}
 function cityRoutes(){return routes().filter(r=>(r.transport||r.transportType||r.type||'bus')==='bus'&&(r.city||r.map||'Тверь')===city())}
 function cityVehicles(){return db().vehicles.filter(v=>(v.city||'Тверь')===city())}
