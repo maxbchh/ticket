@@ -17,7 +17,7 @@
   function tickets(){const x=read(TICKETS_KEY,[]);return Array.isArray(x)?x:[]}
   function sales(){const x=read(BUFFET_KEY,[]);return Array.isArray(x)?x:[]}
   function archives(){const saved=read(ARCHIVES_KEY,[]);const list=Array.isArray(saved)?saved.slice():[];const z=read('ticket_z_report_v1',null);if(z&&typeof z==='object'&&!list.some(x=>String(x.id)===String(z.id)))list.push(z);return list}
-  function saveArchives(list){const all=Array.isArray(list)?list.slice():[];const z=read('ticket_z_report_v1',null);if(z){const u=all.find(x=>String(x.id)===String(z.id));if(u)write('ticket_z_report_v1',u)}write(ARCHIVES_KEY,all)}
+  function saveArchives(list){const existing=read(ARCHIVES_KEY,[]),byId=new Map();[...(Array.isArray(existing)?existing:[]),...(Array.isArray(list)?list:[])].forEach(x=>{if(!x||!x.id)return;const id=String(x.id),old=byId.get(id);if(!old||Date.parse(x.finishedAt||x.updatedAt||'')>=Date.parse(old.finishedAt||old.updatedAt||''))byId.set(id,x)});const all=[...byId.values()].sort((a,b)=>(Date.parse(a.finishedAt||a.startedAt||'')||0)-(Date.parse(b.finishedAt||b.startedAt||'')||0));const z=read('ticket_z_report_v1',null);if(z){const u=all.find(x=>String(x.id)===String(z.id));if(u)write('ticket_z_report_v1',u)}write(ARCHIVES_KEY,all)}
   function ticketKey(t){return String((t&&(t.num??t.number??t.id??t.purchaseId))??JSON.stringify(t||{}))}
   function saleKey(s){return String((s&&(s.id??s.saleId??s.purchaseId))??[s&&s.name,s&&s.time,s&&s.total,s&&s.quantity].join('|'))}
   function tripId(s){return (s&&(s.tripId||s.reportTripId||s.currentTripId))||null}
@@ -407,11 +407,11 @@
     return result;
   });
   wrap('finishDriverShift',original=>function(){
-    const before=shift();if(before&&before.active){ensureMetadata(before,false);tagRows(before)}
+    const before=shift();if(before&&before.active){ensureMetadata(before,false);tagRows(before);storeShift(before)}
     const result=original.apply(this,arguments);
     try{const ended=shift()||before;if(ended){ensureMetadata(ended,false);ended.active=false;ended.finishedAt=ended.finishedAt||new Date().toISOString();ended.gameTimeAtFinish=ended.gameTimeAtFinish||gameTime(ended,ended.finishedAt);tagRows(ended);const all=archives(),id=String(ended.reportId),idx=all.findIndex(a=>String(a.id)===id);const d=liveData(ended),v=vehicle(ended,null),old=idx>=0?all[idx]:null;
       const report=Object.assign({},old||{},{id,reportId:id,reportVersion:2,reportType:'driverShift',tripId:tripId(ended),cashShiftId:ended.cashShiftId||localStorage.getItem('conductor_current_shift_id')||null,startedAt:ended.startedAt||new Date().toISOString(),finishedAt:ended.finishedAt,gameStartTime:ended.gameStartTime||'не задано',gameTimeAtFinish:ended.gameTimeAtFinish,vehicle:Object.assign({},v,{routeId:ended.routeId||null}),tickets:d.tickets,buffet:d.buffet,driverShift:ended,conductorSurname:$('reportConductorSurname')? $('reportConductorSurname').value.trim():(ended.conductorSurname||''),driverSurname:$('reportDriverSurname')? $('reportDriverSurname').value.trim():(ended.driverSurname||''),reportMessage:$('reportMessage')? $('reportMessage').value.trim():(ended.reportMessage||''),printedAt:old&&old.printedAt||null});
-      if(idx>=0)all[idx]=report;else all.push(report);saveArchives(all);storeShift(ended);selectedArchiveId=id;render();
+      if(idx>=0)all[idx]=report;else all.push(report);saveArchives(all);storeShift(ended);try{if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync()}catch(_){}selectedArchiveId=id;render();
     }}catch(e){console.error('Не удалось сохранить отчёт завершённой водительской смены:',e)}
     return result;
   });
