@@ -655,8 +655,6 @@ function refundBatch(){
     const route=document.getElementById('routeSelect'),from=document.getElementById('stationFrom'),to=document.getElementById('stationTo'),passenger=document.getElementById('passengerType');
     vs.pending={id:'cashreq_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),status:'requested',source:'cashier',amount:cashPrice(),createdAt:new Date().toISOString(),routeName:route?.selectedOptions?.[0]?.text||'',from:from?.selectedOptions?.[0]?.text||'',to:to?.selectedOptions?.[0]?.text||'',quantity:Math.max(1,Math.floor(Number(document.getElementById('ticketQuantity')?.value||1))),passengerType:passenger?.value||'full'};
     vs.updatedAt=new Date().toISOString();localStorage.setItem('ticket_virtual_system_v1',JSON.stringify(vs));
-    const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Запрос отправлен на виртуальный терминал. Приложите карту на другом устройстве.';
-    const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Ожидание карты на терминале';
     updateCashRegister();
     const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Ожидание карты на терминале';
     const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Сумма '+cashPrice().toFixed(2)+' BYN отправлена на виртуальный терминал. Приложите карту на другом устройстве.';
