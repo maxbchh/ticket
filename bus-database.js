@@ -4,7 +4,7 @@ const $=id=>document.getElementById(id);
 const STATUSES=['В эксплуатации','На рейсе','Не в эксплуатации','Ремонт','Капитальный ремонт','Списан','Выведен из эксплуатации'];
 const CITIES=['Тверь','Новоозёрск'];
 let activeView='routes';
-function db(){if(!window.state)return null;if(!state.busDatabase||typeof state.busDatabase!=='object')state.busDatabase={vehicles:[],stops:[]};if(!Array.isArray(state.busDatabase.vehicles))state.busDatabase.vehicles=[];if(!Array.isArray(state.busDatabase.stops))state.busDatabase.stops=[];return state.busDatabase}
+function db(){if(typeof state==='undefined')return null;if(!state.busDatabase||typeof state.busDatabase!=='object')state.busDatabase={vehicles:[],stops:[]};if(!Array.isArray(state.busDatabase.vehicles))state.busDatabase.vehicles=[];if(!Array.isArray(state.busDatabase.stops))state.busDatabase.stops=[];return state.busDatabase}
 function city(){return $('busDbCity')?.value||'Тверь'}
 function uid(prefix){return prefix+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7)}
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
