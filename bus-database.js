@@ -170,10 +170,10 @@ function statusClass(s){if(s==='В эксплуатации')return 'bus-status-
 function cityVehicles(){return db().vehicles.filter(v=>canonicalCity(v.city)===city());}
 function cityRoutes(){return filterRoutes(routes());}
 function cityStops(){
- const manual=db().stops.filter(s=>canonicalCity(s.city)===city()).map(s=>({...s,source:'manual'}));
- const derived=[];
- cityRoutes().forEach(r=>(r.stops||[]).forEach((name,i)=>derived.push({id:'route_'+r.id+'_'+i,name,city:city(),routes:[routeName(r)],source:'route'})));
- return [...manual,...derived].sort((a,b)=>String(a.name).localeCompare(String(b.name),'ru'));
+ const map=new Map();
+ db().stops.filter(s=>canonicalCity(s.city)===city()).forEach(s=>{const key=String(s.name||'').trim().toLocaleLowerCase('ru-RU');if(!key)return;map.set(key,{...s,city:city(),routes:Array.isArray(s.routes)?s.routes.slice():[],source:'manual'})});
+ cityRoutes().forEach(r=>(r.stops||[]).forEach(name=>{const key=String(name||'').trim().toLocaleLowerCase('ru-RU');if(!key)return;const current=map.get(key)||{id:'route_stop_'+key.replace(/[^a-zа-я0-9]+/gi,'_'),name:String(name).trim(),city:city(),routes:[],source:'route'};if(!current.routes.includes(routeName(r)))current.routes.push(routeName(r));map.set(key,current)}));
+ return [...map.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name),'ru'));
 }
 function setView(view){
  activeView=view;
