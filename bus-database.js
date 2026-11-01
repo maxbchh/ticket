@@ -310,13 +310,13 @@ function wrapShift(){
 function setCity(value){
  const next=canonicalCity(value),d=db();if(!d)return;
  d.selectedCity=next;d.updatedAt=now();
- if($('busDbCity'))$('busDbCity').value=next;
+ if($('busDbCity'))$('busDbCity').value=next;if($('newRouteCity'))$('newRouteCity').value=next;
  try{localStorage.setItem(KEY,JSON.stringify(d));if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync()}catch(e){console.warn(e)}
  selectedVehicles.clear();
  render();populateShiftSelector();refreshOtherViews();
  document.dispatchEvent(new CustomEvent('ticket-city-change',{detail:{city:next}}));
 }
-function refresh(){if(!db())return;if($('busDbCity'))$('busDbCity').value=city();render();populateShiftSelector();refreshOtherViews();}
+function refresh(){if(!db())return;if($('busDbCity'))$('busDbCity').value=city();if($('newRouteCity'))$('newRouteCity').value=city();render();populateShiftSelector();refreshOtherViews();}
 function wrapRoutePair(){const original=window.saveRoutePair;if(typeof original!=='function'||original.__busDbCityWrapped)return;const wrapped=function(){const selectedCity=canonicalCity($('newRouteCity')?.value||city()),before=new Set(routes().map(r=>String(r.id)));let editId=null;try{if(typeof editingRouteId!=='undefined')editId=editingRouteId}catch(_){}const result=original.apply(this,arguments);routes().forEach(r=>{if(!before.has(String(r.id))||String(r.id)===String(editId))r.city=selectedCity});saveRoutesOnly();return result};wrapped.__busDbCityWrapped=true;window.saveRoutePair=wrapped;}
 function boot(){
  if(!db())return;
