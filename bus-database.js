@@ -328,7 +328,35 @@ function setCity(value){
  document.dispatchEvent(new CustomEvent('ticket-city-change',{detail:{city:next}}));
 }
 function refresh(){if(!db())return;if($('busDbCity'))$('busDbCity').value=city();if($('newRouteCity'))$('newRouteCity').value=city();render();populateShiftSelector();refreshOtherViews();}
-function wrapRoutePair(){const original=window.saveRoutePair;if(typeof original!=='function'||original.__busDbCityWrapped)return;const wrapped=function(){const selectedCity=canonicalCity($('newRouteCity')?.value||city()),before=new Set(routes().map(r=>String(r.id)));let editId=null;try{if(typeof editingRouteId!=='undefined')editId=editingRouteId}catch(_){}const result=original.apply(this,arguments);routes().forEach(r=>{if(!before.has(String(r.id))||String(r.id)===String(editId))r.city=selectedCity});saveRoutesOnly();return result};wrapped.__busDbCityWrapped=true;window.saveRoutePair=wrapped;const pairButton=$('routePairButton');if(pairButton)pairButton.onclick=wrapped;}
+function wrapRoutePair(){
+ const original=window.saveRoutePair;
+ if(typeof original!=='function'||original.__busDbCityWrapped)return;
+ const wrapped=function(){
+  const selectedCity=canonicalCity($('newRouteCity')?.value||city()),name=String($('newRouteName')?.value||'').trim(),transport=$('newRouteTransport')?.value||'bus',fare=Number($('newRouteFarePerStop')?.value)||0,stops=String($('newRouteStops')?.value||'').split(/[,;\\n]/).map(x=>x.trim()).filter(Boolean),before=new Set(routes().map(r=>String(r.id)));
+  let editId=null;try{if(typeof editingRouteId!=='undefined')editId=editingRouteId}catch(_){}
+  const hasReverse=/(?:\\s*\\(\\s*обратный\\s*\\)|\\s+обратный)$/i.test(name),baseName=name.replace(/(?:\\s*\\(\\s*обратный\\s*\\)|\\s+обратный)$/i,'').trim();
+  const partnerName=hasReverse?baseName:(/\\s*(?:→|↔|—|–|-)\\s*/.test(name)?name.split(/\\s*(?:→|↔|—|–|-)\\s*/).reverse().join(' — '):name+' обратный');
+  const result=original.apply(this,arguments);
+  const created=routes().filter(r=>!before.has(String(r.id)));
+  let main=editId?findRouteById(editId):created.find(r=>routeName(r)===name);
+  if(!main)main=routes().find(r=>routeName(r)===name&&routeCity(r)===selectedCity);
+  if(main){
+   main.city=selectedCity;main.transport=transport;main.stops=stops.length?stops:(main.stops||[]);main.farePerStop=fare;
+   let partner=main.reverseOfId?findRouteById(main.reverseOfId):null;
+   if(!partner)partner=routes().find(r=>r!==main&&routeName(r).toLocaleLowerCase('ru-RU')===partnerName.toLocaleLowerCase('ru-RU')&&routeCity(r)===selectedCity);
+   if(!partner)partner=created.find(r=>r!==main);
+   if(!partner){partner={id:uid('busroute'),name:partnerName,transport,city:selectedCity,stops:main.stops.slice().reverse(),farePerStop:fare,updatedAt:now()};routes().push(partner)}
+   partner.name=partnerName;partner.city=selectedCity;partner.transport=transport;partner.stops=main.stops.slice().reverse();partner.farePerStop=fare;
+   main.reverseOfId=partner.id;partner.reverseOfId=main.id;
+   const extras=created.filter(r=>r!==main&&r!==partner&&/(?:обратный.*обратный|обратный\\s*\\(обратный\\))/i.test(routeName(r)));
+   if(extras.length)state.routes=routes().filter(r=>!extras.includes(r));
+  }
+  saveRoutesOnly();
+  return result;
+ };
+ wrapped.__busDbCityWrapped=true;window.saveRoutePair=wrapped;
+ const pairButton=$('routePairButton');if(pairButton)pairButton.onclick=wrapped;
+}
 function watchRemoteChanges(){const snapshot=()=>{try{return JSON.stringify({db:db(),routes:routes()})}catch(_){return ''}};lastDatabaseSnapshot=snapshot();setInterval(()=>{const next=snapshot();if(next&&next!==lastDatabaseSnapshot){ensureNovoozyorskRoutes();lastDatabaseSnapshot=snapshot();render();populateShiftSelector();refreshOtherViews()}},2500)}
 function boot(){
  if(!db())return;
