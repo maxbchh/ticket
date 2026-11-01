@@ -67,11 +67,21 @@ function findRouteById(id){return routes().find(r=>String(r.id)===String(id));}
 function ensureNovoozyorskRoutes(){
  let changed=false;
  const defs=['2','5','100'];
+ const wanted=new Set(defs.flatMap(n=>[n,n+' обратный']).map(x=>x.toLocaleLowerCase('ru-RU')));
+ const seen=new Map(), kept=[];
+ routes().forEach(r=>{
+  if(!isBusRoute(r)||routeCity(r)!=='Новоозёрск'||!wanted.has(routeName(r).toLocaleLowerCase('ru-RU'))){kept.push(r);return}
+  const key=routeName(r).toLocaleLowerCase('ru-RU'),old=seen.get(key);
+  if(!old){seen.set(key,r);kept.push(r);return}
+  if((r.stops||[]).length>(old.stops||[]).length){old.stops=(r.stops||[]).slice();old.farePerStop=Number(r.farePerStop)||old.farePerStop;old.updatedAt=r.updatedAt||old.updatedAt}
+  changed=true;
+ });
+ if(kept.length!==routes().length){state.routes=kept;changed=true}
  defs.forEach(base=>{
   let forward=routes().find(r=>isBusRoute(r)&&routeCity(r)==='Новоозёрск'&&routeName(r).toLocaleLowerCase('ru-RU')===base.toLocaleLowerCase('ru-RU'));
-  let reverse=routes().find(r=>isBusRoute(r)&&routeCity(r)==='Новоозёрск'&&routeName(r).toLocaleLowerCase('ru-RU')=== (base+' обратный').toLocaleLowerCase('ru-RU'));
-  if(!forward){forward={id:uid('busroute'),name:base,transport:'bus',city:'Новоозёрск',stops:[],farePerStop:0.5,reverseOfId:null,updatedAt:now()};routes().push(forward);changed=true}
-  if(!reverse){reverse={id:uid('busroute'),name:base+' обратный',transport:'bus',city:'Новоозёрск',stops:Array.isArray(forward.stops)?forward.stops.slice().reverse():[],farePerStop:Number(forward.farePerStop)||0.5,reverseOfId:forward.id,updatedAt:now()};routes().push(reverse);changed=true}
+  let reverse=routes().find(r=>isBusRoute(r)&&routeCity(r)==='Новоозёрск'&&routeName(r).toLocaleLowerCase('ru-RU')===(base+' обратный').toLocaleLowerCase('ru-RU'));
+  if(!forward){forward={id:'busroute_novoozyorsk_'+base+'_out',name:base,transport:'bus',city:'Новоозёрск',stops:[],farePerStop:0.5,reverseOfId:null,updatedAt:now()};routes().push(forward);changed=true}
+  if(!reverse){reverse={id:'busroute_novoozyorsk_'+base+'_back',name:base+' обратный',transport:'bus',city:'Новоозёрск',stops:Array.isArray(forward.stops)?forward.stops.slice().reverse():[],farePerStop:Number(forward.farePerStop)||0.5,reverseOfId:forward.id,updatedAt:now()};routes().push(reverse);changed=true}
   if(forward.reverseOfId!==reverse.id){forward.reverseOfId=reverse.id;changed=true}
   if(reverse.reverseOfId!==forward.id){reverse.reverseOfId=forward.id;changed=true}
  });
@@ -319,7 +329,7 @@ function setCity(value){
 }
 function refresh(){if(!db())return;if($('busDbCity'))$('busDbCity').value=city();if($('newRouteCity'))$('newRouteCity').value=city();render();populateShiftSelector();refreshOtherViews();}
 function wrapRoutePair(){const original=window.saveRoutePair;if(typeof original!=='function'||original.__busDbCityWrapped)return;const wrapped=function(){const selectedCity=canonicalCity($('newRouteCity')?.value||city()),before=new Set(routes().map(r=>String(r.id)));let editId=null;try{if(typeof editingRouteId!=='undefined')editId=editingRouteId}catch(_){}const result=original.apply(this,arguments);routes().forEach(r=>{if(!before.has(String(r.id))||String(r.id)===String(editId))r.city=selectedCity});saveRoutesOnly();return result};wrapped.__busDbCityWrapped=true;window.saveRoutePair=wrapped;}
-function watchRemoteChanges(){const snapshot=()=>{try{return JSON.stringify({db:db(),routes:routes()})}catch(_){return ''}};lastDatabaseSnapshot=snapshot();setInterval(()=>{const next=snapshot();if(next&&next!==lastDatabaseSnapshot){lastDatabaseSnapshot=next;render();populateShiftSelector();refreshOtherViews()}},2500)}
+function watchRemoteChanges(){const snapshot=()=>{try{return JSON.stringify({db:db(),routes:routes()})}catch(_){return ''}};lastDatabaseSnapshot=snapshot();setInterval(()=>{const next=snapshot();if(next&&next!==lastDatabaseSnapshot){ensureNovoozyorskRoutes();lastDatabaseSnapshot=snapshot();render();populateShiftSelector();refreshOtherViews()}},2500)}
 function boot(){
  if(!db())return;
  const d=db();
@@ -328,6 +338,7 @@ function boot(){
  ensureNovoozyorskRoutes();
  const citySel=$('busDbCity');
  if(citySel){citySel.value=d.selectedCity||'Тверь';citySel.onchange=()=>setCity(citySel.value)}
+ if($('newRouteCity'))$('newRouteCity').value=d.selectedCity||'Тверь'
  document.querySelectorAll('[data-bus-view]').forEach(b=>b.onclick=()=>setView(b.dataset.busView));
  connectShift();populateShiftSelector();wrapShift();wrapRoutePair();render();refreshOtherViews();watchRemoteChanges();
  if(state.driverShift?.active&&state.driverShift.vehicleId){
