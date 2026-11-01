@@ -60,7 +60,7 @@ function saveRoutesOnly(){
 function deletedRouteIds(){try{const a=JSON.parse(localStorage.getItem(DELETED_ROUTES_KEY)||'[]');return Array.isArray(a)?a:[]}catch(_){return[]}}
 function markRouteDeleted(id){const a=deletedRouteIds();if(!a.includes(String(id)))a.push(String(id));localStorage.setItem(DELETED_ROUTES_KEY,JSON.stringify(a))}
 function routeName(r){return String(r?.name||r?.route||'').trim();}
-function reverseRouteName(n){return String(n||'').replace(/\s*(?:\(|—)?\s*обратный\)?$/i,'').trim()+' обратный';}
+function reverseRouteName(n){const s=String(n||'').trim();if(/\s+обратный$/i.test(s))return s.replace(/\s+обратный$/i,'').trim()||'Обратный маршрут';return s?s+' обратный':'Обратный маршрут';}
 function routePairName(n){return String(n||'').replace(/\s*\(?обратный\)?$/i,'').trim();}
 function findRouteById(id){return routes().find(r=>String(r.id)===String(id));}
 function ensureNovoozyorskRoutes(){
@@ -317,6 +317,7 @@ function setCity(value){
  document.dispatchEvent(new CustomEvent('ticket-city-change',{detail:{city:next}}));
 }
 function refresh(){if(!db())return;if($('busDbCity'))$('busDbCity').value=city();render();populateShiftSelector();refreshOtherViews();}
+function wrapRoutePair(){const original=window.saveRoutePair;if(typeof original!=='function'||original.__busDbCityWrapped)return;const wrapped=function(){const selectedCity=canonicalCity($('newRouteCity')?.value||city()),before=new Set(routes().map(r=>String(r.id)));let editId=null;try{if(typeof editingRouteId!=='undefined')editId=editingRouteId}catch(_){}const result=original.apply(this,arguments);routes().forEach(r=>{if(!before.has(String(r.id))||String(r.id)===String(editId))r.city=selectedCity});saveRoutesOnly();return result};wrapped.__busDbCityWrapped=true;window.saveRoutePair=wrapped;}
 function boot(){
  if(!db())return;
  const d=db();
@@ -326,7 +327,7 @@ function boot(){
  const citySel=$('busDbCity');
  if(citySel){citySel.value=d.selectedCity||'Тверь';citySel.onchange=()=>setCity(citySel.value)}
  document.querySelectorAll('[data-bus-view]').forEach(b=>b.onclick=()=>setView(b.dataset.busView));
- connectShift();populateShiftSelector();wrapShift();render();refreshOtherViews();
+ connectShift();populateShiftSelector();wrapShift();wrapRoutePair();render();refreshOtherViews();
  if(state.driverShift?.active&&state.driverShift.vehicleId){
   const v=db().vehicles.find(x=>String(x.id)===String(state.driverShift.vehicleId));
   if(v&&v.status==='В эксплуатации'){v.status='На рейсе';v.updatedAt=now();save()}
