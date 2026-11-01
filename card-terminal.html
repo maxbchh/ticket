@@ -67,11 +67,30 @@ async function pollCashierRequest(){
   const response=await fetch(CARD_URL,{headers:{apikey:CARD_API_KEY,Authorization:'Bearer '+CARD_API_KEY},cache:'no-store'});
   if(!response.ok)throw Error('GET '+response.status);
   const rows=await response.json(),request=rows?.[0]?.data?.virtualSystem?.pending;
-  if(request&&request.status==='requested'&&Date.now()-Date.parse(request.createdAt||'')<300000&&request.id!==cardRequestSeen){
-   cardRequestSeen=request.id;amountDigits=String(Math.round(Number(request.amount||0)*100));mode='waiting';
-   const local=read();local.pending=request;local.updatedAt=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(local));
-   $('screenLabel').textContent='ОПЛАТА ПОЕЗДКИ';$('screenSub').textContent=(request.routeName||'Поездка')+' · '+money(request.amount)+' BYN';
-   $('terminalNotice').className='notice';$('terminalNotice').textContent='Запрос оплаты с кассы · '+money(request.amount)+' BYN';render();
+  if(request&&request.status==='requested'&&Date.now()-(Date.parse(request.createdAt||'')||0)<300000&&request.id!==cardRequestSeen){
+   cardRequestSeen=request.id;
+   const local=read(),saved=local.pending;
+   amountDigits=String(Math.round(Number(request.amount||0)*100));
+   if(saved&&saved.status==='approved'){
+    mode='done';
+    $('screenLabel').textContent='ОПЛАТА УЖЕ СПИСАНА';
+    $('screenSub').textContent='Синхронизируем подтверждение с кассой';
+    $('terminalNotice').className='notice warn';
+    $('terminalNotice').textContent='На этом терминале уже есть подтверждённая оплата. Новую карту не прикладывайте — передаём сохранённую операцию в кассу.';
+    render();$('terminalNotice').classList.remove('hidden');
+    setTimeout(()=>{if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync()},1300);
+   }else if(saved&&saved.status==='completed'&&String(saved.id)===String(request.id)){
+    mode='done';
+    $('screenLabel').textContent='ОПЛАТА ЗАВЕРШЕНА';
+    $('screenSub').textContent='Билет уже выпущен в кассе';
+    $('terminalNotice').className='notice';
+    $('terminalNotice').textContent='✓ Эта операция уже завершена. Повторное списание не требуется.';
+    render();$('terminalNotice').classList.remove('hidden');
+   }else{
+    mode='waiting';local.pending=request;local.updatedAt=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(local));
+    $('screenLabel').textContent='ОПЛАТА ПОЕЗДКИ';$('screenSub').textContent=(request.routeName||'Поездка')+' · '+money(request.amount)+' BYN';
+    $('terminalNotice').className='notice';$('terminalNotice').textContent='Запрос оплаты с кассы · '+money(request.amount)+' BYN';render();
+   }
   }else if((!request||['completed','declined','cancelled'].includes(request.status))&&mode==='waiting'){
    amountDigits='';mode='entry';$('screenLabel').textContent='Введите сумму';$('screenSub').textContent='Ожидание оплаты';$('terminalNotice').classList.add('hidden');render();
   }
