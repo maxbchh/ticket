@@ -658,6 +658,8 @@ function refundBatch(){
     const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Запрос отправлен на виртуальный терминал. Приложите карту на другом устройстве.';
     const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Ожидание карты на терминале';
     updateCashRegister();
+    const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Ожидание карты на терминале';
+    const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Сумма '+cashPrice().toFixed(2)+' BYN отправлена на виртуальный терминал. Приложите карту на другом устройстве.';
   };
 
   window.confirmCashPayment = function(){
@@ -1553,9 +1555,12 @@ function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':
   busy=true;try{
    const r=await fetch(URL,{headers:{apikey:KEY,Authorization:'Bearer '+KEY},cache:'no-store'});if(!r.ok)throw Error('GET '+r.status);
    const rows=await r.json(),remote=rows?.[0]?.data?.virtualSystem?.pending;
-   if(remote&&remote.status==='approved'&&remote.id!==done){
+   if(remote&&remote.id){
     let local={};try{local=JSON.parse(localStorage.getItem('ticket_virtual_system_v1')||'{}')}catch(_){}
-    if(local.pending?.id===remote.id){
+    if(local.pending?.id===remote.id&&remote.status==='declined'){
+     const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Отказ карты';
+     const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Оплата не прошла. Проверьте баланс карты и повторите попытку.';
+    }else if(local.pending?.id===remote.id&&remote.status==='approved'&&remote.id!==done){
      local.pending=remote;local.updatedAt=new Date().toISOString();localStorage.setItem('ticket_virtual_system_v1',JSON.stringify(local));
      done=remote.id;const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Карта принята';
      const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Оплата подтверждена терминалом. Выпускаем билеты…';
