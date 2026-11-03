@@ -3,7 +3,7 @@
   'use strict';
   const DRIVER_KEY='conductor_driver_shift_v1', TICKETS_KEY='conductor_tickets';
   const BUFFET_KEY='ticket_excursion_buffet_sales_v1', ARCHIVES_KEY='ticket_report_archives_v1';
-  const TRIP_KEY='conductor_current_trip_id', $=id=>document.getElementById(id);
+  const TRIP_KEY='conductor_current_trip_id', SELECTED_ARCHIVE_KEY='ticket_report_selected_archive_v1', $=id=>document.getElementById(id);
   const TYPES={bus:'Автобус',trolley:'Троллейбус',tram:'Трамвай',minibus:'Маршрутное такси',uzd:'Транспорт',train:'Железная дорога'};
   let selectedArchiveId='', root=null, renderQueued=false;
 
@@ -262,12 +262,13 @@
     return true;
   }
   function orderedArchives(){return archives().slice().sort((a,b)=>(Date.parse(b.finishedAt||b.startedAt||0)||0)-(Date.parse(a.finishedAt||a.startedAt||0)||0))}
+  function rememberArchive(id){selectedArchiveId=id?String(id):'';if(selectedArchiveId)localStorage.setItem(SELECTED_ARCHIVE_KEY,JSON.stringify(selectedArchiveId));else localStorage.removeItem(SELECTED_ARCHIVE_KEY)}
   function activeShift(){
     if(localStorage.getItem('conductor_shift_active')!=='true')return null;
     const id=localStorage.getItem('conductor_current_shift_id');if(!id)return null;
     return {reportId:String(id),cashShiftId:String(id),startedAt:localStorage.getItem('conductor_shift_started_at')||new Date().toISOString(),active:true,transport:'bus',routeName:'Общая кассовая смена',vehicleNumber:'',vehicleNo:'',stops:[],gameStartTime:''};
   }
-  function initialSelect(){if(activeShift()){selectedArchiveId='';return}const all=orderedArchives(),a=all[0];selectedArchiveId=a?String(a.id):''}
+  function initialSelect(){if(selectedArchiveId&&archives().some(a=>String(a.id)===String(selectedArchiveId)))return;if(activeShift()){rememberArchive('');return}const all=orderedArchives(),a=all[0];rememberArchive(a?String(a.id):'')}
   function txt(id,value){const e=$(id);if(e)e.textContent=value==null?'':String(value)}
   function history(ctx){
     const host=$('reportHistory'),list=orderedArchives();txt('reportArchiveCount',list.length+' отчёт(ов)');
@@ -303,11 +304,13 @@
     return html;
   }
   function context(){
+    const all=archives();
+    const selected=selectedArchiveId?all.find(x=>String(x.id)===String(selectedArchiveId)):null;
+    if(selected)return {archive:selected,shift:selected.driverShift||{},data:archiveData(selected),live:false};
+    if(selectedArchiveId)rememberArchive('');
     const liveShift=activeShift();
-    if(liveShift){selectedArchiveId='';return {archive:null,shift:liveShift,data:liveData(liveShift),live:true}}
-    const all=archives(),a=selectedArchiveId?all.find(x=>String(x.id)===String(selectedArchiveId)):null;
-    if(a)return {archive:a,shift:a.driverShift||{},data:archiveData(a),live:false};
-    if(!selectedArchiveId&&all.length){initialSelect();const chosen=all.find(x=>String(x.id)===String(selectedArchiveId));if(chosen)return {archive:chosen,shift:chosen.driverShift||{},data:archiveData(chosen),live:false}}
+    if(liveShift)return {archive:null,shift:liveShift,data:liveData(liveShift),live:true};
+    if(all.length){initialSelect();const chosen=all.find(x=>String(x.id)===String(selectedArchiveId));if(chosen)return {archive:chosen,shift:chosen.driverShift||{},data:archiveData(chosen),live:false}}
     return {archive:null,shift:{},data:{tickets:[],buffet:[]},live:false};
   }
   function render(){
@@ -397,13 +400,13 @@
     else if(a==='refresh')refresh();else if(a==='manual')openManual();
     else if(a==='cancel-manual'){$('reportManualEditor').hidden=true;$('reportManualEditor').dataset.keepOpen=''}
     else if(a==='save-manual')saveManual();else if(a==='save-details')saveDetails();
-    else if(a==='select-current'){selectedArchiveId='';$('reportManualEditor').hidden=true;render()}
-    else if(a==='select-archive'){selectedArchiveId=String(b.dataset.id||'');$('reportManualEditor').hidden=true;render()}
+    else if(a==='select-current'){rememberArchive('');$('reportManualEditor').hidden=true;render()}
+    else if(a==='select-archive'){rememberArchive(b.dataset.id||'');$('reportManualEditor').hidden=true;render()}
   }
   function wrap(name,factory){const original=window[name];if(typeof original!=='function'||original.__ticketReportWrapped)return;const fn=factory(original);fn.__ticketReportWrapped=true;window[name]=fn}
   wrap('startDriverShift',original=>function(){
     const result=original.apply(this,arguments);
-    try{const s=ensureMetadata(shift(),true);if(s&&s.active){s.tripId=String(read(TRIP_KEY,null)||s.tripId||('trip_'+Date.now()));s.cashShiftId=localStorage.getItem('conductor_current_shift_id')||null;s.reportMessage='';storeShift(s);selectedArchiveId=''}refresh()}catch(e){console.error('Не удалось подготовить отчёт смены:',e)}
+    try{const s=ensureMetadata(shift(),true);if(s&&s.active){s.tripId=String(read(TRIP_KEY,null)||s.tripId||('trip_'+Date.now()));s.cashShiftId=localStorage.getItem('conductor_current_shift_id')||null;s.reportMessage='';storeShift(s);rememberArchive('')}refresh()}catch(e){console.error('Не удалось подготовить отчёт смены:',e)}
     return result;
   });
   wrap('finishDriverShift',original=>function(){
@@ -411,7 +414,7 @@
     const result=original.apply(this,arguments);
     try{const ended=shift()||before;if(ended){ensureMetadata(ended,false);ended.active=false;ended.finishedAt=ended.finishedAt||new Date().toISOString();ended.gameTimeAtFinish=ended.gameTimeAtFinish||gameTime(ended,ended.finishedAt);tagRows(ended);const all=archives(),id=String(ended.reportId),idx=all.findIndex(a=>String(a.id)===id);const d=liveData(ended),v=vehicle(ended,null),old=idx>=0?all[idx]:null;
       const report=Object.assign({},old||{},{id,reportId:id,reportVersion:2,reportType:'driverShift',tripId:tripId(ended),cashShiftId:ended.cashShiftId||localStorage.getItem('conductor_current_shift_id')||null,startedAt:ended.startedAt||new Date().toISOString(),finishedAt:ended.finishedAt,gameStartTime:ended.gameStartTime||'не задано',gameTimeAtFinish:ended.gameTimeAtFinish,vehicle:Object.assign({},v,{routeId:ended.routeId||null}),tickets:d.tickets,buffet:d.buffet,driverShift:ended,conductorSurname:$('reportConductorSurname')? $('reportConductorSurname').value.trim():(ended.conductorSurname||''),driverSurname:$('reportDriverSurname')? $('reportDriverSurname').value.trim():(ended.driverSurname||''),reportMessage:$('reportMessage')? $('reportMessage').value.trim():(ended.reportMessage||''),printedAt:old&&old.printedAt||null});
-      if(idx>=0)all[idx]=report;else all.push(report);saveArchives(all);storeShift(ended);try{if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync()}catch(_){}selectedArchiveId=id;render();
+      if(idx>=0)all[idx]=report;else all.push(report);saveArchives(all);storeShift(ended);try{if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync()}catch(_){}rememberArchive(id);render();
     }}catch(e){console.error('Не удалось сохранить отчёт завершённой водительской смены:',e)}
     return result;
   });
@@ -432,7 +435,8 @@
   });
   function boot(){
     if(!installUI())return;
-    if(activeShift())selectedArchiveId='';else initialSelect();
+    const savedSelection=read(SELECTED_ARCHIVE_KEY,'');selectedArchiveId=savedSelection&&archives().some(a=>String(a.id)===String(savedSelection))?String(savedSelection):'';
+    if(!selectedArchiveId&&!activeShift())initialSelect();
     render();
     window.TicketReports={refresh,print:printReport,openManual,cancelManual:()=>{$('reportManualEditor').hidden=true;$('reportManualEditor').dataset.keepOpen=''},saveManual,selectArchive:id=>{selectedArchiveId=String(id||'');render()},setMode:refresh,markPrinted};
     window.addEventListener('focus',refresh);
