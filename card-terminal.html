@@ -96,7 +96,15 @@ async function pollCashierRequest(){
   }
  }catch(error){console.warn('Запрос оплаты кассы:',error)}finally{cardPollBusy=false}
 }
-setInterval(pollCashierRequest,500);pollCashierRequest();
+let approvalRetryBusy=false,lastApprovalRetry=0;
+async function retryPendingApproval(){
+ if(approvalRetryBusy||Date.now()-lastApprovalRetry<2500||typeof window.forceReliableCloudSync!=='function')return;
+ const pending=read().pending;
+ if(!pending||pending.status!=='approved'||pending.source!=='cashier'||!pending.id)return;
+ approvalRetryBusy=true;lastApprovalRetry=Date.now();
+ try{await window.forceReliableCloudSync()}catch(error){console.warn('Повторная отправка подтверждения оплаты:',error)}finally{approvalRetryBusy=false}
+}
+setInterval(()=>{pollCashierRequest();retryPendingApproval()},500);pollCashierRequest();
 window.addEventListener('storage',e=>{if(e.key===KEY)render()});setInterval(()=>{const s=read(),sig=JSON.stringify({u:s.updatedAt,c:s.cards.length,t:s.transactions.length,p:s.pending&&s.pending.id});if(sig!==lastSignature){lastSignature=sig;render()}},1500);render();
 })();
 </script></body></html>
