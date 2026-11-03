@@ -706,15 +706,28 @@ function refundBatch(){
     let vs={cards:[],transactions:[],pending:null};try{vs=JSON.parse(localStorage.getItem('ticket_virtual_system_v1')||'{}')}catch(_){}
     const route=document.getElementById('routeSelect'),from=document.getElementById('stationFrom'),to=document.getElementById('stationTo'),passenger=document.getElementById('passengerType');
     const existing=vs.pending,age=existing?Date.now()-(Date.parse(existing.createdAt||'')||0):Infinity;
-    const reusable=existing&&Math.abs(Number(existing.amount||0)-cashPrice())<.001&&(existing.status==='approved'||(existing.status==='requested'&&age>=0&&age<300000));
+    const existingTicket=existing&&(state.tickets||[]).some(t=>String(t.cardPaymentRequestId||'')===String(existing.id));
+    if(existing&&existing.status==='approved'&&!existingTicket){
+      const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Предыдущая оплата уже подтверждена';
+      const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Предыдущая оплата уже списана. Сначала выпустите соответствующий билет. Не прикладывайте карту повторно.';
+      return;
+    }
+    const reusable=existing&&existing.status==='requested'&&Math.abs(Number(existing.amount||0)-cashPrice())<.001&&age>=0&&age<8000;
     if(!reusable){
-      vs.pending={id:'cashreq_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),status:'requested',source:'cashier',amount:cashPrice(),createdAt:new Date().toISOString(),routeName:route?.selectedOptions?.[0]?.text||'',from:from?.selectedOptions?.[0]?.text||'',to:to?.selectedOptions?.[0]?.text||'',quantity:Math.max(1,Math.floor(Number(document.getElementById('ticketQuantity')?.value||1))),passengerType:passenger?.value||'full'};
+      vs.pending={id:'cashreq_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),status:'requested',source:'cashier',amount:cashPrice(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),routeName:route?.selectedOptions?.[0]?.text||'',from:from?.selectedOptions?.[0]?.text||'',to:to?.selectedOptions?.[0]?.text||'',quantity:Math.max(1,Math.floor(Number(document.getElementById('ticketQuantity')?.value||1))),passengerType:passenger?.value||'full'};
     }
     localStorage.setItem('ticket_card_payment_request_id',String(vs.pending.id));
     vs.updatedAt=new Date().toISOString();localStorage.setItem('ticket_virtual_system_v1',JSON.stringify(vs));
     updateCashRegister();
-    const status=document.getElementById('cashPaymentStatus');if(status)status.textContent=vs.pending.status==='approved'?'Карта принята · выпускаем билет':'Ожидание карты на терминале';
-    const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Сумма '+cashPrice().toFixed(2)+' BYN отправлена на виртуальный терминал. Приложите карту на другом устройстве.';
+    const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Отправляем запрос на терминал…';
+    const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Отправляем '+cashPrice().toFixed(2)+' BYN на терминал. Обычно запрос появляется сразу.';
+    const sync=typeof window.forceReliableCloudSync==='function'?window.forceReliableCloudSync():Promise.resolve(false);
+    Promise.resolve(sync).then(ok=>{
+      if(String(localStorage.getItem('ticket_card_payment_request_id')||'')!==String(vs.pending.id))return;
+      const current=document.getElementById('cashPaymentStatus'),message=document.getElementById('cashRegisterMessage');
+      if(ok){if(current)current.textContent='Ожидание карты на терминале';if(message)message.textContent='Запрос '+cashPrice().toFixed(2)+' BYN отправлен. Приложите карту на терминале.';}
+      else{if(current)current.textContent='Нет связи с терминалом';if(message)message.textContent='Запрос пока не подтверждён сервером. Не прикладывайте карту, пока он не появится на терминале.';}
+    }).catch(error=>{console.warn('Отправка запроса на терминал:',error)});
   };
 
   window.confirmCashPayment = function(){
@@ -1677,7 +1690,7 @@ function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':
    const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Связь с терминалом прервана. Оплата не подтверждена кассой; не прикладывайте карту повторно, пока статус не обновится.';
   }finally{busy=false}
  }
- setInterval(poll,900);
+ setInterval(poll,500);
  poll();
 })();
 </script><script src="./bus-database.js"></script></body></html>
