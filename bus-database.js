@@ -279,11 +279,15 @@ function render(){
  const citySel=$('busDbCity');if(citySel&&citySel.value!==city())citySel.value=city();
  renderRoutes();renderFleet(vs);renderStops();
 }
+function canTakeBusOnLine(v){
+ const status=String(v?.status||'В эксплуатации').trim().toLocaleLowerCase('ru-RU');
+ return !['на рейсе','ремонт','капитальный ремонт','списан','выведен из эксплуатации','порезан','порезан на металл'].includes(status);
+}
 function populateShiftSelector(){
  const sel=$('shiftBusSelect');if(!sel||!db())return;
  const old=sel.value;
  sel.innerHTML='<option value="">— выбрать автобус —</option><option value="manual">Ввести модель вручную</option>'+
- cityVehicles().filter(v=>v.status!=='Списан'&&v.status!=='Выведен из эксплуатации').map(v=>'<option value="'+esc(v.id)+'" '+(v.status!=='В эксплуатации'?'disabled':'')+'>'+esc(v.number?v.number+' · ':'')+esc(v.model)+' — '+esc(v.status)+'</option>').join('');
+ cityVehicles().map(v=>'<option value="'+esc(v.id)+'" '+(!canTakeBusOnLine(v)?'disabled':'')+'>'+esc(v.number?v.number+' · ':'')+esc(v.model)+' — '+esc(v.status||'В эксплуатации')+'</option>').join('');
  if(old&&Array.from(sel.options).some(o=>o.value===old))sel.value=old;
 }
 function connectShift(){
@@ -300,10 +304,11 @@ function wrapShift(){
  if(typeof start==='function'&&!start.__busDbWrapped){
   const wrapped=function(){
    const id=$('shiftBusSelect')?.value||'',v=db().vehicles.find(x=>String(x.id)===String(id));
-   if(v&&v.status!=='В эксплуатации'){alert('Этот автобус нельзя выбрать: его статус — «'+v.status+'».');return}
+   if(v&&!canTakeBusOnLine(v)){alert('Этот автобус нельзя выпустить на линию: его статус — «'+v.status+'».');return}
    if(v&&$('shiftVehicleModel'))$('shiftVehicleModel').value=v.model;
+   const previousStatus=v?(v.status||'В эксплуатации'):null;
    const result=start.apply(this,arguments),s=state.driverShift;
-   if(s&&s.active){s.vehicleId=v?.id||null;s.vehicleNumber='';s.vehicle=v?v.model:($('shiftVehicleModel')?.value.trim()||'');if(v){v.status='На рейсе';v.updatedAt=now()}save()}
+   if(s&&s.active){s.vehicleId=v?.id||null;s.vehicleNumber='';s.vehicle=v?v.model:($('shiftVehicleModel')?.value.trim()||'');if(v){s.previousVehicleStatus=previousStatus;v.status='На рейсе';v.updatedAt=now()}save()}
    return result;
   };
   wrapped.__busDbWrapped=true;window.startDriverShift=wrapped;
@@ -313,7 +318,7 @@ function wrapShift(){
   const wrapped=function(){
    const s=state.driverShift,vehicle=s?.vehicleId?db().vehicles.find(v=>String(v.id)===String(s.vehicleId)):null;
    const result=finish.apply(this,arguments);
-   if(s&&!s.active&&vehicle&&vehicle.status==='На рейсе'){vehicle.status='В эксплуатации';vehicle.updatedAt=now()}
+   if(s&&!s.active&&vehicle&&vehicle.status==='На рейсе'){vehicle.status=s.previousVehicleStatus||'В эксплуатации';vehicle.updatedAt=now();delete s.previousVehicleStatus}
    save();return result;
   };
   wrapped.__busDbWrapped=true;window.finishDriverShift=wrapped;
