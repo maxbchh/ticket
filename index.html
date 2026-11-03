@@ -721,7 +721,7 @@ function refundBatch(){
     updateCashRegister();
     const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Отправляем запрос на терминал…';
     const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Отправляем '+cashPrice().toFixed(2)+' BYN на терминал. Обычно запрос появляется сразу.';
-    const sync=typeof window.forceReliableCloudSync==='function'?window.forceReliableCloudSync():Promise.resolve(false);
+    const sync=(async()=>{if(typeof window.forceReliableCloudSync!=='function')return false;for(let attempt=0;attempt<3;attempt++){try{if(await window.forceReliableCloudSync())return true}catch(error){console.warn('Повтор отправки запроса на терминал:',error)}if(attempt<2)await new Promise(resolve=>setTimeout(resolve,300*(attempt+1)));}return false})();
     Promise.resolve(sync).then(ok=>{
       if(String(localStorage.getItem('ticket_card_payment_request_id')||'')!==String(vs.pending.id))return;
       const current=document.getElementById('cashPaymentStatus'),message=document.getElementById('cashRegisterMessage');
