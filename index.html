@@ -754,6 +754,7 @@ function refundBatch(){
         }
         localStorage.setItem('ticket_card_payment_last_completed',String(cardRequest.id));
         localStorage.removeItem('ticket_card_payment_request_id');
+        if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync();
         window.closeCashRegister();window.__cashPaymentMethod=null;
         return true;
       }
