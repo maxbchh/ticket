@@ -386,7 +386,7 @@
   }
   function markPrinted(id){if(!id)return;const list=archives(),i=list.findIndex(a=>String(a.id)===String(id));if(i<0)return;list[i].printedAt=new Date().toISOString();saveArchives(list);render()}
   function printReport(idOverride){
-    if(idOverride)selectedArchiveId=String(idOverride);render();const ctx=context();
+    if(idOverride)rememberArchive(idOverride);render();const ctx=context();
     if(!ctx.archive&&!(ctx.shift&&ctx.shift.active)){alert('Нет сохранённого отчёта для печати.');return}
     const archiveId=ctx.archive?String(ctx.archive.id):'';document.body.classList.add('print-ticket-report');
     const cleanup=()=>document.body.classList.remove('print-ticket-report');
@@ -438,7 +438,7 @@
     const savedSelection=read(SELECTED_ARCHIVE_KEY,'');selectedArchiveId=savedSelection&&archives().some(a=>String(a.id)===String(savedSelection))?String(savedSelection):'';
     if(!selectedArchiveId&&!activeShift())initialSelect();
     render();
-    window.TicketReports={refresh,print:printReport,openManual,cancelManual:()=>{$('reportManualEditor').hidden=true;$('reportManualEditor').dataset.keepOpen=''},saveManual,selectArchive:id=>{selectedArchiveId=String(id||'');render()},setMode:refresh,markPrinted};
+    window.TicketReports={refresh,print:printReport,openManual,cancelManual:()=>{$('reportManualEditor').hidden=true;$('reportManualEditor').dataset.keepOpen=''},saveManual,selectArchive:id=>{rememberArchive(id);render()},setMode:refresh,markPrinted};
     window.addEventListener('focus',refresh);
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh()});
     window.addEventListener('load',refresh,{once:true});
