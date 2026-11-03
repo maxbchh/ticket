@@ -281,7 +281,7 @@ function render(){
 }
 function canTakeBusOnLine(v){
  const status=String(v?.status||'В эксплуатации').trim().toLocaleLowerCase('ru-RU');
- return !['на рейсе','ремонт','капитальный ремонт','списан','выведен из эксплуатации','порезан','порезан на металл'].includes(status);
+ return !['на рейсе','ремонт','капитальный ремонт','списан','выведен из эксплуатации','порезан','порезаны','порезана','порезан на металл'].includes(status);
 }
 function populateShiftSelector(){
  const sel=$('shiftBusSelect');if(!sel||!db())return;
