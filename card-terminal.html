@@ -104,7 +104,7 @@ async function retryPendingApproval(){
  approvalRetryBusy=true;lastApprovalRetry=Date.now();
  try{await window.forceReliableCloudSync()}catch(error){console.warn('Повторная отправка подтверждения оплаты:',error)}finally{approvalRetryBusy=false}
 }
-setInterval(()=>{pollCashierRequest();retryPendingApproval()},500);pollCashierRequest();
+function resumeSync(){if(document.visibilityState==='visible'){cardRequestSeen='';pollCashierRequest();retryPendingApproval()}}document.addEventListener('visibilitychange',resumeSync);window.addEventListener('pageshow',resumeSync);window.addEventListener('focus',resumeSync);setInterval(()=>{pollCashierRequest();retryPendingApproval()},1200);pollCashierRequest();
 window.addEventListener('storage',e=>{if(e.key===KEY)render()});setInterval(()=>{const s=read(),sig=JSON.stringify({u:s.updatedAt,c:s.cards.length,t:s.transactions.length,p:s.pending&&s.pending.id});if(sig!==lastSignature){lastSignature=sig;render()}},1500);render();
 })();
 </script></body></html>
