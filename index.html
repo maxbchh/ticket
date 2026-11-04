@@ -846,30 +846,34 @@ function refundBatch(){
   }
   const oldProcess=window.processTicketSale;
   window.processTicketSale=function(){
-    if(!state.shiftActive){alert("Ошибка: Смена закрыта! Откройте смену.");return;}
+    if(!state.shiftActive){alert("Ошибка: Смена закрыта! Откройте смену.");return false;}
     const r=selectedRoute(),fromEl=document.getElementById('stationFrom'),toEl=document.getElementById('stationTo');
-    if(!r||!fromEl||!toEl||fromEl.value===''||toEl.value===''){alert('Выберите маршрут, станцию отправления и станцию назначения.');return;}
+    if(!r||!fromEl||!toEl||fromEl.value===''||toEl.value===''){alert('Выберите маршрут, станцию отправления и станцию назначения.');return false;}
     const fromIndex=Number(fromEl.value),toIndex=Number(toEl.value);
-    if(!Number.isInteger(fromIndex)||!Number.isInteger(toIndex)||fromIndex===toIndex){alert('Станция назначения должна отличаться от станции отправления.');return;}
+    if(!Number.isInteger(fromIndex)||!Number.isInteger(toIndex)||fromIndex===toIndex){alert('Станция назначения должна отличаться от станции отправления.');return false;}
     const price=Math.max(0,Number(document.getElementById('ticketPrice')?.value||0));
     const qty=Math.max(1,Math.min(500,Math.floor(Number(document.getElementById('ticketQuantity')?.value||1))));
+    const method=window.__cashPaymentMethod==='card'?'card':'cash';
+    const received=method==='cash'?Math.max(0,Number(document.getElementById('cashReceivedInput')?.value||0)):price*qty;
+    const total=Math.round(price*qty*100)/100;
+    const change=method==='cash'?Math.max(0,Math.round((received-total)*100)/100):0;
     document.getElementById('ticketQuantity').value=String(qty);
     ensureTripForRoute(r,false);
+    state.tickets=Array.isArray(state.tickets)?state.tickets:[];
     const now=new Date(),issued=[];
     for(let i=0;i<qty;i++){
-      const t={num:state.lastTicketNum,time:now.toLocaleTimeString('ru-RU'),route:r.name,routeId:r.id,tripId:state.currentTripId,from:fromEl.selectedOptions?.[0]?.text||'',to:toEl.selectedOptions?.[0]?.text||'',fromIndex,toIndex,price,status:'active',conductor:state.conductorName,passenger:document.getElementById('passengerType')?.value||'full',note:document.getElementById('ticketNoteInput')?.value||'',issuedAt:now.toISOString(),shiftId:state.currentShiftId||null};
+      const t={num:state.lastTicketNum,time:now.toLocaleTimeString('ru-RU'),route:r.name,routeId:r.id,tripId:state.currentTripId,from:fromEl.selectedOptions?.[0]?.text||'',to:toEl.selectedOptions?.[0]?.text||'',fromIndex,toIndex,price,status:'active',conductor:state.conductorName,passenger:document.getElementById('passengerType')?.value||'full',note:document.getElementById('ticketNoteInput')?.value||'',issuedAt:now.toISOString(),shiftId:String(state.currentShiftId||localStorage.getItem('conductor_current_shift_id')||''),paymentMethod:method,paymentStatus:'Оплачено',cashReceived:i===0?received:0,change:i===0?change:0,quantity:1};
       state.tickets.push(t);issued.push(t);state.lastTicketNum++;
-      if(window.addOperation)window.addOperation('Продажа',t.num,t.price,'Билет выпущен');
+      if(window.addOperation)window.addOperation('Продажа',t.num,t.price,'Билет выпущен · '+(method==='card'?'Карта':'Наличные'));
     }
     localStorage.setItem('conductor_tickets',JSON.stringify(state.tickets));
     localStorage.setItem('conductor_last_num',String(state.lastTicketNum));
-    const cash=document.getElementById('cashRegisterModal');
-    if(cash){cash.classList.remove('open');cash.hidden=true;cash.setAttribute('aria-hidden','true');cash.style.setProperty('display','none','important');}
     persist();updateShiftStats();updatePreview();
     if(window.renderOperations)renderOperations();
     if(window.searchTickets)searchTickets();
     renderStops();
-  };;
+    return issued.length===1?issued[0]:issued;
+  };
   const oldOpen=window.openCashRegister;
   window.openCashRegister=function(){
     oldOpen();
@@ -1539,7 +1543,7 @@ window.addEventListener('load',()=>{let saved=null;try{saved=JSON.parse(localSto
 <script src="./buffet-design.js"></script>
 <script src="./buffet-cashier.js"></script>
 
-<script src="./card-bridge.js"></script><script id="ticket-database-view">
+<script id="ticket-database-view">
 function renderTicketDatabase(){
  const host=document.getElementById('ticketDatabaseList'),summary=document.getElementById('ticketDatabaseSummary'),input=document.getElementById('ticketDatabaseSearch');
  if(!host)return;
