@@ -1640,7 +1640,7 @@ function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':
     return;
    }
    if(remote.status==='approved'){
-    local.pending={...(local.pending||{}),...remote};local.updatedAt=new Date().toISOString();localStorage.setItem(VS_KEY,JSON.stringify(local));
+    local.pending={...(local.pending||{}),...remote};local.updatedAt=new Date().toISOString();localStorage.setItem(VS_KEY,JSON.stringify(local));localStorage.setItem('ticket_card_payment_request_id',String(remote.id));
     if(typeof state==='undefined'||!state.shiftActive){const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Оплата получена · откройте кассовую смену';const msg=document.getElementById('cashRegisterMessage');if(msg)msg.textContent='Терминал подтвердил оплату. Для выпуска билета откройте кассовую смену; повторно карту прикладывать не нужно.';return;}
     const hasOriginalSelection=!!(remote.routeId&&remote.fromValue!==undefined&&remote.toValue!==undefined);
     if(!hasOriginalSelection){
