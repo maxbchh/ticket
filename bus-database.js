@@ -299,6 +299,21 @@ function connectShift(){
   else{model.readOnly=false;delete model.dataset.busId;if(sel.value==='manual')model.focus();else model.value=''}
  });
 }
+function findShiftVehicle(s){
+ if(!s)return null;
+ const d=db();if(!d)return null;
+ if(s.vehicleId){const exact=d.vehicles.find(v=>String(v.id)===String(s.vehicleId));if(exact)return exact;}
+ const number=String(s.vehicleNumber||'').trim().toLocaleLowerCase('ru-RU');
+ if(number){const matches=d.vehicles.filter(v=>String(v.number||'').trim().toLocaleLowerCase('ru-RU')===number);if(matches.length===1)return matches[0];}
+ const model=String(s.vehicle||'').trim().toLocaleLowerCase('ru-RU');
+ if(model){
+  const route=routes().find(r=>String(r.id)===String(s.routeId));
+  const routeCityName=route?routeCity(route):null;
+  const matches=d.vehicles.filter(v=>v.status==='На рейсе'&&String(v.model||'').trim().toLocaleLowerCase('ru-RU')===model&&(!routeCityName||canonicalCity(v.city)===routeCityName));
+  if(matches.length===1)return matches[0];
+ }
+ return null;
+}
 function wrapShift(){
  const start=window.startDriverShift;
  if(typeof start==='function'&&!start.__busDbWrapped){
@@ -308,7 +323,7 @@ function wrapShift(){
    if(v&&$('shiftVehicleModel'))$('shiftVehicleModel').value=v.model;
    const previousStatus=v?(v.status||'В эксплуатации'):null;
    const result=start.apply(this,arguments),s=state.driverShift;
-   if(s&&s.active){s.vehicleId=v?.id||null;s.vehicleNumber='';s.vehicle=v?v.model:($('shiftVehicleModel')?.value.trim()||'');if(v){s.previousVehicleStatus=previousStatus;v.status='На рейсе';v.updatedAt=now()}save()}
+   if(s&&s.active){s.vehicleId=v?.id||null;s.vehicleNumber=v?.number||$('shiftVehicleNumber')?.value.trim()||'';s.vehicle=v?v.model:($('shiftVehicleModel')?.value.trim()||'');s.updatedAt=now();if(v){s.previousVehicleStatus=previousStatus;v.status='На рейсе';v.updatedAt=now()}save()}
    return result;
   };
   wrapped.__busDbWrapped=true;window.startDriverShift=wrapped;
@@ -316,10 +331,23 @@ function wrapShift(){
  const finish=window.finishDriverShift;
  if(typeof finish==='function'&&!finish.__busDbWrapped){
   const wrapped=function(){
-   const s=state.driverShift,vehicle=s?.vehicleId?db().vehicles.find(v=>String(v.id)===String(s.vehicleId)):null;
+   const s=state.driverShift;
    const result=finish.apply(this,arguments);
-   if(s&&!s.active&&vehicle&&vehicle.status==='На рейсе'){vehicle.status=s.previousVehicleStatus||'В эксплуатации';vehicle.updatedAt=now();delete s.previousVehicleStatus}
-   save();return result;
+   const finished=state.driverShift;
+   if(finished&&!finished.active){
+    const vehicle=findShiftVehicle(finished);
+    if(vehicle&&vehicle.status==='На рейсе'){
+     vehicle.status=finished.previousVehicleStatus||'В эксплуатации';
+     vehicle.updatedAt=now();
+     finished.vehicleId=vehicle.id;
+     finished.vehicleNumber=vehicle.number||finished.vehicleNumber||'';
+     delete finished.previousVehicleStatus;
+    }
+    finished.updatedAt=now();
+    if(!vehicle)console.warn('Не найден автобус для восстановления статуса после рейса',finished.vehicle,finished.vehicleNumber,finished.vehicleId);
+   }
+   save();
+   return result;
   };
   wrapped.__busDbWrapped=true;window.finishDriverShift=wrapped;
  }
@@ -375,9 +403,12 @@ function boot(){
  if($('newRouteCity')){$('newRouteCity').value=d.selectedCity||'Тверь';$('newRouteCity').onchange=()=>setCity($('newRouteCity').value)}
  document.querySelectorAll('[data-bus-view]').forEach(b=>b.onclick=()=>setView(b.dataset.busView));
  connectShift();populateShiftSelector();wrapShift();wrapRoutePair();setView('fleet');refreshOtherViews();watchRemoteChanges();
- if(state.driverShift?.active&&state.driverShift.vehicleId){
-  const v=db().vehicles.find(x=>String(x.id)===String(state.driverShift.vehicleId));
-  if(v&&v.status==='В эксплуатации'){v.status='На рейсе';v.updatedAt=now();save()}
+ if(state.driverShift){
+  const s=state.driverShift, v=findShiftVehicle(s);
+  if(s.active&&v&&v.status!=='На рейсе'){v.status='На рейсе';v.updatedAt=now();save()}
+  else if(!s.active&&v&&v.status==='На рейсе'){
+   v.status=s.previousVehicleStatus||'В эксплуатации';v.updatedAt=now();delete s.previousVehicleStatus;s.updatedAt=now();save();
+  }
  }
  document.addEventListener('ticket-city-change',()=>{populateShiftSelector();render()});
  window.addEventListener('focus',refresh);
