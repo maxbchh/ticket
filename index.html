@@ -656,6 +656,20 @@ function refundBatch(){
     updateCashRegister();
   };
 
+  function retryCompletedCardSync(requestId){
+    if(!requestId||typeof window.forceReliableCloudSync!=='function')return;
+    let attempts=0;
+    const run=async function(){
+      try{
+        const current=JSON.parse(localStorage.getItem('ticket_virtual_system_v1')||'{}');
+        if(!current.pending||String(current.pending.id)!==String(requestId)||current.pending.status!=='completed')return;
+        if(await window.forceReliableCloudSync())return;
+      }catch(error){console.warn('Повторная синхронизация завершённой оплаты:',error)}
+      if(attempts<5){attempts++;setTimeout(run,350*attempts)}
+    };
+    run();
+  }
+
   window.setCashCard = function(){
     window.__cashPaymentMethod = 'card';
     const input = document.getElementById('cashReceivedInput');
@@ -670,7 +684,7 @@ function refundBatch(){
       localStorage.setItem('ticket_card_payment_request_id',String(existing.id));
       const status=document.getElementById('cashPaymentStatus');if(status)status.textContent='Найдена оплаченная покупка · '+Number(existing.amount||0).toFixed(2)+' BYN';
       const msg=document.getElementById('cashRegisterMessage');
-      if(msg)msg.textContent='Эта оплата уже подтверждена. Новое списание не выполняется. Проверьте маршрут, остановки и сумму исходной покупки, затем нажмите «Оплатить и выпустить» — касса только выпустит билет.';
+      if(msg)msg.textContent='Эта покупка уже оплачена — повторное списание запрещено. Выберите исходный маршрут и остановки, проверьте ту же сумму и нажмите «Оплатить и выпустить». Касса оформит билет по сохранённой оплате.';
       return;
     }
     const reusable=existing&&existing.status==='requested'&&Math.abs(Number(existing.amount||0)-cashPrice())<.001&&age>=0&&age<8000;
@@ -715,7 +729,7 @@ function refundBatch(){
         }
         localStorage.setItem('ticket_card_payment_last_completed',String(cardRequest.id));
         localStorage.removeItem('ticket_card_payment_request_id');
-        if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync();
+        retryCompletedCardSync(cardRequest.id);
         window.closeCashRegister();window.__cashPaymentMethod=null;
         return true;
       }
@@ -764,7 +778,7 @@ function refundBatch(){
       vs.updatedAt=new Date().toISOString();localStorage.setItem('ticket_virtual_system_v1',JSON.stringify(vs));
       localStorage.setItem('ticket_card_payment_last_completed',String(cardRequest.id));
       localStorage.removeItem('ticket_card_payment_request_id');
-      if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync();
+      retryCompletedCardSync(cardRequest.id);
     }
     window.closeCashRegister();
     window.__cashPaymentMethod=null;
