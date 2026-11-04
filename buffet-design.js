@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   var PRODUCTS_KEY = 'ticket_excursion_buffet_products_v1';
+  var DELETED_PRODUCTS_KEY = 'ticket_excursion_buffet_deleted_products_v1';
   var SALES_KEY = 'ticket_excursion_buffet_sales_v1';
   var CART_KEY = 'ticket_excursion_buffet_cart_v1';
   var THEME_KEY = 'ticket_visual_theme_v1';
@@ -56,7 +57,7 @@
   function cart() { return read(CART_KEY, []); }
   function cartItems() { var list=products(), basket=cart(); return basket.map(function (entry) { var p=list.find(function (x) { return x.id===entry.productId; }); return p ? {productId:p.id,name:p.name,price:Number(p.price),quantity:Math.max(1,Math.floor(Number(entry.quantity)||1)),stock:Number(p.stock)||0} : null; }).filter(Boolean); }
   function cartTotal(items) { return Math.round(items.reduce(function (sum, item) { return sum+item.price*item.quantity; },0)*100)/100; }
-  function saveProducts(items) { var stamp=new Date().toISOString(); items.forEach(function(p){p.updatedAt=stamp;}); localStorage.setItem(PRODUCTS_KEY, JSON.stringify(items)); renderBuffet(); }
+  function saveProducts(items) { var stamp=new Date().toISOString(); items.forEach(function(p){p.updatedAt=stamp;}); var activeIds=items.map(function(p){return String(p.id)}); var deleted=read(DELETED_PRODUCTS_KEY,[]).map(String).filter(function(id){return activeIds.indexOf(id)<0;}); localStorage.setItem(DELETED_PRODUCTS_KEY,JSON.stringify(deleted)); localStorage.setItem(PRODUCTS_KEY, JSON.stringify(items)); if(typeof window.forceReliableCloudSync==='function')window.forceReliableCloudSync(); renderBuffet(); }
   function renderBuffet() {
     var host = el('buffetApp');
     if (!host) return;
@@ -135,7 +136,10 @@
       button.onclick = function () {
         var p = products().find(function (x) { return x.id === button.getAttribute('data-buffet-delete'); });
         if (!p || !confirm('Удалить товар «' + p.name + '»? История продаж останется.')) return;
-        saveProducts(products().filter(function (x) { return x.id !== p.id; }));
+        var id=String(p.id), deleted=read(DELETED_PRODUCTS_KEY,[]).map(String);
+        if(deleted.indexOf(id)<0)deleted.push(id);
+        localStorage.setItem(DELETED_PRODUCTS_KEY,JSON.stringify(deleted));
+        saveProducts(products().filter(function (x) { return String(x.id)!==id; }));
       };
     });
     el('buffetClearSales').onclick = function () {
