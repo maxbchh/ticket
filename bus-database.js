@@ -314,6 +314,20 @@ function findShiftVehicle(s){
  }
  return null;
 }
+function reconcileShiftVehicle(){
+ const s=state?.driverShift;if(!s)return false;
+ const vehicle=findShiftVehicle(s);if(!vehicle)return false;
+ let changed=false;
+ if(s.active&&vehicle.status!=='На рейсе'){
+  if(!s.previousVehicleStatus)s.previousVehicleStatus=vehicle.status||'В эксплуатации';
+  vehicle.status='На рейсе';vehicle.updatedAt=now();changed=true;
+ }else if(!s.active&&vehicle.status==='На рейсе'){
+  vehicle.status=s.previousVehicleStatus||'В эксплуатации';vehicle.updatedAt=now();
+  delete s.previousVehicleStatus;s.updatedAt=s.finishedAt||now();changed=true;
+ }
+ if(changed)save();
+ return changed;
+}
 function wrapShift(){
  const start=window.startDriverShift;
  if(typeof start==='function'&&!start.__busDbWrapped){
@@ -391,7 +405,7 @@ function wrapRoutePair(){
  wrapped.__busDbCityWrapped=true;window.saveRoutePair=wrapped;
  const pairButton=$('routePairButton');if(pairButton)pairButton.onclick=wrapped;
 }
-function watchRemoteChanges(){const snapshot=()=>{try{return JSON.stringify({db:db(),routes:routes()})}catch(_){return ''}};lastDatabaseSnapshot=snapshot();setInterval(()=>{const next=snapshot();if(next&&next!==lastDatabaseSnapshot){ensureNovoozyorskRoutes();lastDatabaseSnapshot=snapshot();render();populateShiftSelector();refreshOtherViews()}},2500)}
+function watchRemoteChanges(){const snapshot=()=>{try{return JSON.stringify({db:db(),routes:routes()})}catch(_){return ''}};lastDatabaseSnapshot=snapshot();setInterval(()=>{reconcileShiftVehicle();const next=snapshot();if(next&&next!==lastDatabaseSnapshot){ensureNovoozyorskRoutes();lastDatabaseSnapshot=snapshot();render();populateShiftSelector();refreshOtherViews()}},2500)}
 function boot(){
  if(!db())return;
  const d=db();
@@ -403,13 +417,7 @@ function boot(){
  if($('newRouteCity')){$('newRouteCity').value=d.selectedCity||'Тверь';$('newRouteCity').onchange=()=>setCity($('newRouteCity').value)}
  document.querySelectorAll('[data-bus-view]').forEach(b=>b.onclick=()=>setView(b.dataset.busView));
  connectShift();populateShiftSelector();wrapShift();wrapRoutePair();setView('fleet');refreshOtherViews();watchRemoteChanges();
- if(state.driverShift){
-  const s=state.driverShift, v=findShiftVehicle(s);
-  if(s.active&&v&&v.status!=='На рейсе'){v.status='На рейсе';v.updatedAt=now();save()}
-  else if(!s.active&&v&&v.status==='На рейсе'){
-   v.status=s.previousVehicleStatus||'В эксплуатации';v.updatedAt=now();delete s.previousVehicleStatus;s.updatedAt=now();save();
-  }
- }
+ if(state.driverShift)reconcileShiftVehicle();
  document.addEventListener('ticket-city-change',()=>{populateShiftSelector();render()});
  window.addEventListener('focus',refresh);
  // On startup, push an already-filled fleet back to Supabase after the first pull.
@@ -419,6 +427,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 window.TicketBusDatabase={
  render,refresh,populateShiftSelector,setCity,getCity:city,filterRoutes,
  getDatabase:()=>db(),
+ reconcileShiftVehicle,
  save
 };
 })();
