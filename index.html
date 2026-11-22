@@ -1199,195 +1199,276 @@ document.addEventListener('change',e=>{if(e.target?.id==='shiftTransportType')po
 window.addEventListener('load',()=>{let saved=null;try{saved=JSON.parse(localStorage.getItem(KEY)||'null')}catch(_){}if(saved&&typeof saved==='object')state.driverShift=saved;window.renderDriverShift=render;populateRoutes();render()});
 })();
 </script><script src="./qr-sales.js"></script>
-
-
-
-
-<script id="quick-universal-ticket-v2">
+<script id="quick-universal-and-refund-fix">
 (function(){
   'use strict';
-  var PRICE = 1.33;
-  var pending = false;
-  var previousPrice = null;
-  var originalProcess = window.processTicketSale;
-  var originalClose = window.closeCashRegister;
+  var QUICK_PRICE=1.79;
+  var quickUniversalPending=false;
+  var originalProcess=window.processTicketSale;
 
-  function money(value){
-    return (Math.round((Number(value)||0)*100)/100).toLocaleString('ru-RU',{
-      minimumFractionDigits:2, maximumFractionDigits:2
-    })+' BYN';
+  function money(n){return (Math.round((Number(n)||0)*100)/100).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' BYN';}
+  function saveState(){
+    try{
+      if(typeof persist==='function')persist();
+      else{
+        localStorage.setItem('conductor_tickets',JSON.stringify(state.tickets||[]));
+        localStorage.setItem('conductor_operations',JSON.stringify(state.operations||[]));
+        localStorage.setItem('conductor_last_num',String(state.lastTicketNum||1001));
+        if(typeof window.syncConductorData==='function')window.syncConductorData();
+      }
+    }catch(e){console.error('Не удалось сохранить данные билета',e);}
   }
   function refresh(){
-    if(typeof window.updateShiftStats==='function')window.updateShiftStats();
+    if(typeof updateShiftStats==='function')updateShiftStats();
     if(typeof window.renderOperations==='function')window.renderOperations();
     if(typeof window.searchTickets==='function')window.searchTickets();
-    if(typeof window.updatePreview==='function')window.updatePreview();
-    if(typeof window.forceReliableCloudSync==='function'){
-      try{Promise.resolve(window.forceReliableCloudSync()).catch(function(e){console.warn('Синхронизация талона:',e);});}
-      catch(e){console.warn('Синхронизация талона:',e);}
-    }
-  }
-  function restorePrice(){
-    var field=document.getElementById('ticketPrice');
-    if(field && previousPrice!==null)field.value=previousPrice;
-    previousPrice=null;
-    if(typeof window.updatePreview==='function')window.updatePreview();
-  }
-  function save(){
-    if(typeof window.persist==='function')window.persist();
-    else{
-      localStorage.setItem('conductor_tickets',JSON.stringify(state.tickets||[]));
-      localStorage.setItem('conductor_operations',JSON.stringify(state.operations||[]));
-      localStorage.setItem('conductor_last_num',String(state.lastTicketNum||1001));
-    }
+    if(typeof updatePreview==='function')updatePreview();
   }
 
   window.processTicketSale=function(){
-    if(!pending)return originalProcess.apply(this,arguments);
-    if(!state.shiftActive){
-      alert('Сначала откройте кассовую смену.');
-      return false;
+    var before=(state.tickets||[]).length;
+    var result=originalProcess.apply(this,arguments);
+    var added=(state.tickets||[]).length>before?state.tickets[state.tickets.length-1]:null;
+    if(added){
+      var quick=quickUniversalPending;
+      if(quick){
+        added.price=QUICK_PRICE;
+        added.route='Универсальный талон';
+        added.note='Быстрый универсальный билет';
+        added.passenger='full';
+        added.paymentMethod=window.__cashPaymentMethod==='card'?'Карта':'Наличные';
+        added.paymentStatus='Оплачено';
+        added.purchaseId='quick_'+added.num+'_'+Date.now();
+      }
+      state.operations=Array.isArray(state.operations)?state.operations:[];
+      state.operations.push({time:new Date().toLocaleString('ru-RU'),type:quick?'Продажа быстрого билета':'Продажа билета',ticket:added.num,amount:Number(added.price||0),conductor:state.conductorName||'Кондуктор',details:(quick?'Универсальный билет':'Билет по маршруту')+' · '+(added.from||'')+' → '+(added.to||'')+(added.paymentMethod?' · '+added.paymentMethod:'')});
+      quickUniversalPending=false;
+      saveState();
+      refresh();
     }
-    var now=new Date();
-    var num=Number(state.lastTicketNum)||1001;
-    var method=window.__cashPaymentMethod==='card'?'card':'cash';
-    var total=PRICE;
-    var received=method==='cash'
-      ?Math.max(0,Number(document.getElementById('cashReceivedInput')&&document.getElementById('cashReceivedInput').value||total))
-      :total;
-    if(method==='cash' && received+0.0001<total){
-      var message=document.getElementById('cashRegisterMessage');
-      if(message)message.textContent='Недостаточно денег для оплаты талона.';
-      return false;
-    }
-    var ticket={
-      num:num,
-      time:now.toLocaleTimeString('ru-RU'),
-      route:'Универсальный талон',
-      routeId:null,
-      tripId:null,
-      from:'—',
-      to:'—',
-      fromIndex:null,
-      toIndex:null,
-      price:total,
-      unitPrice:total,
-      quantity:1,
-      status:'active',
-      conductor:state.conductorName||'Кондуктор',
-      passenger:'universal',
-      note:'Универсальный талон',
-      issuedAt:now.toISOString(),
-      shiftId:String(state.currentShiftId||localStorage.getItem('conductor_current_shift_id')||''),
-      reportShiftId:localStorage.getItem('ticket_report_current_shift_v1')||null,
-      reportTripId:state.currentTripId||localStorage.getItem('conductor_current_trip_id')||null,
-      paymentMethod:method,
-      paymentStatus:'Оплачено',
-      cashReceived:received,
-      change:method==='cash'?Math.max(0,Math.round((received-total)*100)/100):0,
-      purchaseId:'universal_voucher_'+num+'_'+now.getTime()
-    };
-    state.tickets=Array.isArray(state.tickets)?state.tickets:[];
-    state.tickets.push(ticket);
-    state.lastTicketNum=num+1;
-    state.operations=Array.isArray(state.operations)?state.operations:[];
-    state.operations.push({
-      time:now.toLocaleString('ru-RU'),
-      type:'Продажа универсального талона',
-      ticket:num,
-      amount:total,
-      conductor:state.conductorName||'Кондуктор',
-      details:'Универсальный талон · '+money(total)+' · '+(method==='card'?'Банковская карта':'Наличные')
-    });
-    pending=false;
-    restorePrice();
-    save();
-    refresh();
-    return ticket;
-  };
-
-  window.closeCashRegister=function(){
-    if(pending){
-      pending=false;
-      restorePrice();
-      window.__cashPaymentMethod=null;
-    }
-    if(typeof originalClose==='function')return originalClose.apply(this,arguments);
+    return result;
   };
 
   window.quickUniversalTicket=function(){
-    if(!state.shiftActive){
-      alert('Сначала откройте кассовую смену.');
+    if(!state.shiftActive){alert('Сначала откройте кассовую смену.');return;}
+    var route=document.getElementById('routeSelect');
+    var from=document.getElementById('stationFrom');
+    var to=document.getElementById('stationTo');
+    if(!route||!route.value||!from||!to||from.value===''||to.value===''){
+      alert('Сначала выберите маршрут и остановки.');
       return;
     }
-    if(pending)return;
-    var field=document.getElementById('ticketPrice');
-    if(!field){
-      alert('Не найдено поле стоимости билета.');
+    var r=(state.routes||[]).find(function(x){return String(x.id)===String(route.value);});
+    var fi=Number(from.value),ti=Number(to.value);
+    if(r&&Array.isArray(r.stops)&&ti<=fi&&r.stops.length-1>fi){
+      to.value=String(r.stops.length-1);
+    }
+    if(Number(to.value)<=Number(from.value)){
+      alert('Для билета выбери конечную остановку после текущей.');
       return;
     }
-    previousPrice=field.value;
-    field.value=PRICE.toFixed(2);
-    var quantity=document.getElementById('ticketQuantity');
-    if(quantity)quantity.value='1';
+    var price=document.getElementById('ticketPrice');
     var note=document.getElementById('ticketNoteInput');
-    if(note)note.value='Универсальный талон';
-    pending=true;
+    var qty=document.getElementById('ticketQuantity');
+    if(price)price.value=QUICK_PRICE.toFixed(2);
+    if(note)note.value='Быстрый универсальный билет';
+    if(qty)qty.value='1';
+    var category=document.getElementById('passengerType');
+    if(category)category.value='full';
+    quickUniversalPending=true;
+    if(typeof updatePreview==='function')updatePreview();
     if(typeof window.openCashRegister==='function')window.openCashRegister();
     if(typeof window.updateCashSaleSummary==='function')window.updateCashSaleSummary();
   };
 
-  // Возврат талона использует тот же журнал и механизм аннулирования, что и обычный билет.
-  if(typeof window.cancelTicket!=='function'){
-    window.cancelTicket=function(num){
-      var ticket=(state.tickets||[]).find(function(t){return Number(t.num)===Number(num);});
-      if(!ticket||ticket.status==='cancelled')return;
-      var reason=prompt('Укажи причину возврата талона №'+ticket.num+':','Возврат по просьбе пассажира');
-      if(reason===null)return;
-      var amount=Math.round((Number(ticket.price)||0)*100)/100;
-      var now=new Date().toLocaleString('ru-RU');
-      ticket.status='cancelled';
-      ticket.cancelReason=reason;
-      ticket.refund=amount;
-      ticket.cancelledAt=now;
-      state.refunds=Array.isArray(state.refunds)?state.refunds:[];
-      state.refunds.push({num:ticket.num,amount:amount,reason:reason,time:now});
-      state.operations=Array.isArray(state.operations)?state.operations:[];
-      state.operations.push({time:now,type:'Возврат',ticket:ticket.num,amount:-amount,conductor:state.conductorName||'Кондуктор',details:reason});
-      save();refresh();
-      if(typeof window.showRefundDialog==='function')window.showRefundDialog({num:ticket.num,refund:amount});
-      else alert('Талон №'+ticket.num+' аннулирован. Возврат: '+money(amount));
-    };
-  }
+  // Ensure the missing cancellation handler used by the ticket list is available.
+  window.cancelTicket=function(num){
+    var ticket=(state.tickets||[]).find(function(t){return Number(t.num)===Number(num);});
+    if(!ticket||ticket.status==='cancelled')return;
+    var reason=prompt('Укажи причину возврата билета №'+ticket.num+':','Возврат по просьбе пассажира');
+    if(reason===null)return;
+    var amount=Math.round((Number(ticket.price)||0)*100)/100;
+    var now=new Date().toLocaleString('ru-RU');
+    ticket.status='cancelled';
+    ticket.cancelReason=reason;
+    ticket.refund=amount;
+    ticket.cancelledAt=now;
+    state.refunds=Array.isArray(state.refunds)?state.refunds:[];
+    state.refunds.push({num:ticket.num,amount:amount,reason:reason,time:now});
+    state.operations=Array.isArray(state.operations)?state.operations:[];
+    state.operations.push({time:now,type:'Возврат',ticket:ticket.num,amount:-amount,conductor:state.conductorName||'Кондуктор',details:reason});
+    saveState();
+    refresh();
+    if(typeof showRefundDialog==='function')showRefundDialog({num:ticket.num,refund:amount});
+    else alert('Билет №'+ticket.num+' аннулирован. Возврат: '+money(amount));
+  };
 
-  function addButton(){
-    var existing=document.getElementById('quickUniversalTicketButton');
-    if(existing){
-      existing.textContent='🎫 Универсальный талон · 1,33 BYN';
-      existing.onclick=null;
-      existing.replaceWith(existing.cloneNode(true));
-      existing=document.getElementById('quickUniversalTicketButton');
-      existing.addEventListener('click',window.quickUniversalTicket);
-      return;
+  window.addEventListener('load',function(){
+    var saleButtons=document.querySelector('#tab-terminal .form-grid');
+    var existing=document.querySelector('#tab-terminal button[onclick="processTicketSale()"]');
+    if(existing&&!document.getElementById('quickUniversalTicketButton')){
+      var btn=document.createElement('button');
+      btn.id='quickUniversalTicketButton';
+      btn.type='button';
+      btn.className='btn btn-cyan btn-block';
+      btn.style.cssText='grid-column:1/-1;min-height:48px;font-weight:800;margin-top:8px';
+      btn.textContent='⚡ Быстрый билет · 1,79 BYN';
+      btn.addEventListener('click',window.quickUniversalTicket);
+      var row=existing.parentElement;
+      if(row)row.parentElement.insertBefore(btn,row.nextSibling);
+      else if(saleButtons)saleButtons.appendChild(btn);
     }
-    var issue=document.querySelector('#tab-terminal button[onclick="processTicketSale()"]');
-    if(!issue)return;
-    var button=document.createElement('button');
-    button.id='quickUniversalTicketButton';
-    button.type='button';
-    button.className='btn btn-cyan btn-block';
-    button.style.cssText='grid-column:1/-1;min-height:48px;font-weight:800;margin-top:8px';
-    button.textContent='🎫 Универсальный талон · 1,33 BYN';
-    button.addEventListener('click',window.quickUniversalTicket);
-    var row=issue.parentElement;
-    if(row&&row.parentElement)row.parentElement.insertBefore(button,row.nextSibling);
-    else issue.insertAdjacentElement('afterend',button);
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addButton,{once:true});
-  else addButton();
-  window.addEventListener('load',addButton,{once:true});
+  });
 })();
 </script>
+
+<script id="quick-universal-and-refund-fix">
+(function(){
+  'use strict';
+  var QUICK_PRICE=1.79;
+  var quickUniversalPending=false;
+  var quickOriginalPrice=null;
+  var quickPriceActive=false;
+  var originalProcess=window.processTicketSale;
+  var originalCloseCashRegister=window.closeCashRegister;
+
+  function money(n){return (Math.round((Number(n)||0)*100)/100).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' BYN';}
+  function saveState(){
+    try{
+      if(typeof persist==='function')persist();
+      else{
+        localStorage.setItem('conductor_tickets',JSON.stringify(state.tickets||[]));
+        localStorage.setItem('conductor_operations',JSON.stringify(state.operations||[]));
+        localStorage.setItem('conductor_last_num',String(state.lastTicketNum||1001));
+        if(typeof window.syncConductorData==='function')window.syncConductorData();
+      }
+    }catch(e){console.error('Не удалось сохранить данные билета',e);}
+  }
+  function refresh(){
+    if(typeof updateShiftStats==='function')updateShiftStats();
+    if(typeof window.renderOperations==='function')window.renderOperations();
+    if(typeof window.searchTickets==='function')window.searchTickets();
+    if(typeof updatePreview==='function')updatePreview();
+  }
+  function restoreQuickPrice(){
+    var price=document.getElementById('ticketPrice');
+    if(price&&quickOriginalPrice!==null)price.value=quickOriginalPrice;
+    quickOriginalPrice=null;
+    quickPriceActive=false;
+    if(typeof updatePreview==='function')updatePreview();
+  }
+
+  window.closeCashRegister=function(){
+    if(quickUniversalPending){
+      quickUniversalPending=false;
+      restoreQuickPrice();
+    }
+    if(typeof originalCloseCashRegister==='function')return originalCloseCashRegister.apply(this,arguments);
+  };
+
+  window.processTicketSale=function(){
+    if(quickUniversalPending){
+      if(!state.shiftActive){alert('Сначала откройте кассовую смену.');return;}
+      var now=new Date();
+      var num=Number(state.lastTicketNum)||1001;
+      var method=window.__cashPaymentMethod==='card'?'Карта':'Наличные';
+      var ticket={
+        num:num,
+        time:now.toLocaleTimeString('ru-RU'),
+        route:'Быстрый билет',
+        routeId:null,
+        tripId:null,
+        from:'—',
+        to:'—',
+        price:QUICK_PRICE,
+        status:'active',
+        conductor:state.conductorName||'Кондуктор',
+        passenger:'full',
+        note:'Универсальный билет без привязки к остановкам',
+        issuedAt:now.toISOString(),
+        shiftId:state.currentShiftId||null,
+        paymentMethod:method,
+        paymentStatus:'Оплачено',
+        purchaseId:'quick_'+num+'_'+Date.now()
+      };
+      state.tickets=Array.isArray(state.tickets)?state.tickets:[];
+      state.tickets.push(ticket);
+      state.lastTicketNum=num+1;
+      state.operations=Array.isArray(state.operations)?state.operations:[];
+      state.operations.push({
+        time:now.toLocaleString('ru-RU'),
+        type:'Продажа быстрого билета',
+        ticket:num,
+        amount:QUICK_PRICE,
+        conductor:state.conductorName||'Кондуктор',
+        details:'Быстрый билет · '+QUICK_PRICE.toFixed(2)+' BYN · '+method
+      });
+      quickUniversalPending=false;
+      restoreQuickPrice();
+      saveState();
+      refresh();
+      return true;
+    }
+    // The underlying sale handler records every ticket and operation, including multi-ticket purchases.
+    return originalProcess.apply(this,arguments);
+  };
+
+  window.quickUniversalTicket=function(){
+    if(!state.shiftActive){alert('Сначала откройте кассовую смену.');return;}
+    if(quickUniversalPending)return;
+    var price=document.getElementById('ticketPrice');
+    var qty=document.getElementById('ticketQuantity');
+    if(!price){alert('Не найдено поле стоимости билета.');return;}
+    quickOriginalPrice=price.value;
+    quickPriceActive=true;
+    price.value=QUICK_PRICE.toFixed(2);
+    if(qty)qty.value='1';
+    quickUniversalPending=true;
+    if(typeof window.openCashRegister==='function')window.openCashRegister();
+    if(typeof window.updateCashSaleSummary==='function')window.updateCashSaleSummary();
+  };
+
+  // Ensure the missing cancellation handler used by the ticket list is available.
+  window.cancelTicket=function(num){
+    var ticket=(state.tickets||[]).find(function(t){return Number(t.num)===Number(num);});
+    if(!ticket||ticket.status==='cancelled')return;
+    var reason=prompt('Укажи причину возврата билета №'+ticket.num+':','Возврат по просьбе пассажира');
+    if(reason===null)return;
+    var amount=Math.round((Number(ticket.price)||0)*100)/100;
+    var now=new Date().toLocaleString('ru-RU');
+    ticket.status='cancelled';
+    ticket.cancelReason=reason;
+    ticket.refund=amount;
+    ticket.cancelledAt=now;
+    state.refunds=Array.isArray(state.refunds)?state.refunds:[];
+    state.refunds.push({num:ticket.num,amount:amount,reason:reason,time:now});
+    state.operations=Array.isArray(state.operations)?state.operations:[];
+    state.operations.push({time:now,type:'Возврат',ticket:ticket.num,amount:-amount,conductor:state.conductorName||'Кондуктор',details:reason});
+    saveState();
+    refresh();
+    if(typeof showRefundDialog==='function')showRefundDialog({num:ticket.num,refund:amount});
+    else alert('Билет №'+ticket.num+' аннулирован. Возврат: '+money(amount));
+  };
+
+  window.addEventListener('load',function(){
+    var saleButtons=document.querySelector('#tab-terminal .form-grid');
+    var existing=document.querySelector('#tab-terminal button[onclick="processTicketSale()"]');
+    if(existing&&!document.getElementById('quickUniversalTicketButton')){
+      var btn=document.createElement('button');
+      btn.id='quickUniversalTicketButton';
+      btn.type='button';
+      btn.className='btn btn-cyan btn-block';
+      btn.style.cssText='grid-column:1/-1;min-height:48px;font-weight:800;margin-top:8px';
+      btn.textContent='⚡ Быстрый билет · 1,79 BYN';
+      btn.addEventListener('click',window.quickUniversalTicket);
+      var row=existing.parentElement;
+      if(row)row.parentElement.insertBefore(btn,row.nextSibling);
+      else if(saleButtons)saleButtons.appendChild(btn);
+    }
+  });
+})();
+</script>
+
 <script id="driver-shift-route-lock-fix">
 (function(){
   function activeShift(){return state.driverShift&&state.driverShift.active?state.driverShift:null}
